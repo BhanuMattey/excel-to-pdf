@@ -49,3 +49,5 @@ backend/storage/outputs/*
 # Keep the directories themselves
 !backend/storage/uploads/.gitkeep
 !backend/storage/outputs/.gitkeep
+
+.vercel
