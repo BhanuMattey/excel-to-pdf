@@ -10,7 +10,8 @@ export const config = {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathSegments = (req.query.path as string[]) ?? []
-  const targetPath = '/' + pathSegments.join('/')
+  // Proxy strips the /api/python prefix; Python expects /api/* routes
+  const targetPath = '/api/' + pathSegments.join('/')
 
   const search = new URLSearchParams()
   for (const [k, v] of Object.entries(req.query)) {

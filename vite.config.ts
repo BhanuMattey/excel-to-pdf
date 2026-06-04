@@ -643,7 +643,8 @@ function localApiPlugin() {
             const { request: httpRequest } = await import('http')
             const PYTHON_HOST = process.env.PYTHON_API_URL?.replace(/^https?:\/\//, '').split(':')[0] || '153.75.250.227'
             const PYTHON_PORT = Number(process.env.PYTHON_API_URL?.split(':')[2] ?? 8000)
-            const targetPath = url.replace('/api/python', '')
+            // /api/python/convertexcel → /api/convertexcel (Python expects /api/* routes)
+            const targetPath = url.replace('/api/python', '/api')
 
             await new Promise<void>((resolve, reject) => {
               const proxyReq = httpRequest({
