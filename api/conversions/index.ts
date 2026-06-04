@@ -2,11 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { eq, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { conversions } from '../../src/db/schema'
-import { createPool, createDb } from '../_db'
+import { createDb } from '../_db'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pool = createPool()
-  const d = createDb(pool)
+  const d = createDb()
   try {
     if (req.method === 'POST') {
       const { user_id, file_name, file_size, status } = req.body as Record<string, unknown>
@@ -38,8 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('[conversions] stack:', stack)
     console.error('[conversions] DATABASE_URL set:', !!process.env.DATABASE_URL)
     return res.status(500).json({ error: 'DB error', detail: msg, stack })
-  } finally {
-    await pool.end()
   }
 }
 

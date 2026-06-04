@@ -1,11 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { eq } from 'drizzle-orm'
 import { conversions } from '../../src/db/schema'
-import { createPool, createDb } from '../_db'
+import { createDb } from '../_db'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pool = createPool()
-  const d = createDb(pool)
+  const d = createDb()
   const id = req.query.id as string
   try {
     if (req.method === 'PATCH') {
@@ -40,7 +39,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[conversions/id]', msg)
     return res.status(500).json({ error: 'DB error', detail: msg })
-  } finally {
-    await pool.end()
   }
 }

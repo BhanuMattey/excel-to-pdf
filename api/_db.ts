@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
+import { neon } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/neon-http'
 
 function cleanDatabaseUrl(url: string): string {
   try {
@@ -11,18 +11,10 @@ function cleanDatabaseUrl(url: string): string {
   }
 }
 
-export function createPool() {
+export function createDb() {
   const raw = process.env.DATABASE_URL || ''
   if (!raw) throw new Error('DATABASE_URL env var is not set')
   const connectionString = cleanDatabaseUrl(raw)
-  const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } })
-  // Bypass RLS for server-side queries — neondb_owner is a superuser so SET LOCAL works
-  pool.on('connect', (client) => {
-    client.query('SET SESSION AUTHORIZATION DEFAULT; SET row_security = off;').catch(() => {})
-  })
-  return pool
-}
-
-export function createDb(pool: Pool) {
-  return drizzle(pool)
+  const sql = neon(connectionString)
+  return drizzle(sql)
 }

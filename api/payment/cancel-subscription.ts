@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { profiles } from '../../src/db/schema'
 import { eq } from 'drizzle-orm'
-import { createPool, createDb } from '../_db'
+import { createDb } from '../_db'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
@@ -28,8 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(502).json({ detail: err?.error?.description || 'Cancellation failed' })
   }
 
-  const pool = createPool()
-  const d = createDb(pool)
+  const d = createDb()
   try {
     await d.update(profiles).set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })
       .where(eq(profiles.id, body.user_id))
@@ -37,7 +36,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error('[payment/cancel-subscription]', err)
     return res.status(500).json({ detail: 'Cancellation failed' })
-  } finally {
-    await pool.end()
   }
 }
