@@ -8,7 +8,11 @@ if (!neonAuthUrl) {
 }
 
 export const authClient = createAuthClient(neonAuthUrl, {
-  adapter: BetterAuthReactAdapter(),
+  adapter: BetterAuthReactAdapter({
+    fetchOptions: {
+      credentials: 'include',
+    },
+  }),
 })
 
 export const { signIn, signUp, signOut, useSession, getSession, requestPasswordReset, resetPassword } = authClient
