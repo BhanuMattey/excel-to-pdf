@@ -1,6 +1,5 @@
-import { pgTable, pgPolicy, text, integer, bigint, timestamp, doublePrecision } from 'drizzle-orm/pg-core'
-import { relations, sql } from 'drizzle-orm'
-import { authenticatedRole, authUid } from 'drizzle-orm/neon'
+import { pgTable, text, integer, bigint, timestamp, doublePrecision } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 
 export const conversions = pgTable('conversions', {
   id: text('id').primaryKey(),
@@ -13,13 +12,7 @@ export const conversions = pgTable('conversions', {
   expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (t) => [
-  pgPolicy('conversions_user_policy', {
-    as: 'permissive',
-    to: authenticatedRole,
-    using: sql`${t.userId} = ${authUid()}`,
-  }),
-]).enableRLS()
+})
 
 export const profiles = pgTable('profiles', {
   id: text('id').primaryKey(),
@@ -30,13 +23,7 @@ export const profiles = pgTable('profiles', {
   planId: text('plan_id'),
   renewalDate: timestamp('renewal_date'),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (t) => [
-  pgPolicy('profiles_user_policy', {
-    as: 'permissive',
-    to: authenticatedRole,
-    using: sql`${t.id} = ${authUid()}`,
-  }),
-]).enableRLS()
+})
 
 export const payments = pgTable('payments', {
   id: text('id').primaryKey(),
@@ -53,13 +40,7 @@ export const payments = pgTable('payments', {
   razorpaySubscriptionId: text('razorpay_subscription_id'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-}, (t) => [
-  pgPolicy('payments_user_policy', {
-    as: 'permissive',
-    to: authenticatedRole,
-    using: sql`${t.userId} = ${authUid()}`,
-  }),
-]).enableRLS()
+})
 
 export type Conversion = typeof conversions.$inferSelect
 export type NewConversion = typeof conversions.$inferInsert
