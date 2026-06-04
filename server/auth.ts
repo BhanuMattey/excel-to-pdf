@@ -53,7 +53,11 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 12, // do not extend sessions beyond the 12h login window
   },
   plugins: [
-    dash(),
+    dash({
+      apiKey: process.env.BETTER_AUTH_API_KEY,
+      apiUrl: process.env.BETTER_AUTH_API_URL,
+      kvUrl: process.env.BETTER_AUTH_KV_URL,
+    }),
   ],
   trustedOrigins: [
     'http://localhost:3000',
