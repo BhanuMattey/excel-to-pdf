@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { betterAuth } from 'better-auth'
+import { dash } from '@better-auth/infra'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
@@ -51,6 +52,9 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 12, // 12 hours
     updateAge: 60 * 60 * 12, // do not extend sessions beyond the 12h login window
   },
+  plugins: [
+    dash(),
+  ],
   trustedOrigins: [
     'http://localhost:3000',
     'http://localhost:3001',

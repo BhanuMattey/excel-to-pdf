@@ -19,7 +19,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/s3-request-presigner": "^3.1057.0",
-    "@better-auth/infra": "^0.2.10",
+    "@better-auth/infra": "^0.2.11",
     "@neondatabase/serverless": "^1.1.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
