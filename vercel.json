@@ -1,9 +1,6 @@
 {
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@5.8.11"
-    },
-    "api/python/[...path].ts": {
       "runtime": "@vercel/node@5.8.11",
       "maxDuration": 120
     }
