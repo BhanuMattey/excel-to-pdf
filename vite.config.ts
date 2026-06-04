@@ -637,6 +637,48 @@ function localApiPlugin() {
           return
         }
 
+        // ── Python backend proxy (avoids mixed-content on dev) ───────────────
+        if (url.startsWith('/api/python/')) {
+          try {
+            const { request: httpRequest } = await import('http')
+            const PYTHON_HOST = process.env.PYTHON_API_URL?.replace(/^https?:\/\//, '').split(':')[0] || '153.75.250.227'
+            const PYTHON_PORT = Number(process.env.PYTHON_API_URL?.split(':')[2] ?? 8000)
+            const targetPath = url.replace('/api/python', '')
+
+            await new Promise<void>((resolve, reject) => {
+              const proxyReq = httpRequest({
+                host: PYTHON_HOST,
+                port: PYTHON_PORT,
+                path: targetPath,
+                method: req.method,
+                headers: (() => {
+                  const h: Record<string, string | string[]> = {}
+                  for (const [k, v] of Object.entries(req.headers)) {
+                    if (k.toLowerCase() === 'host') continue
+                    if (v != null) h[k] = v
+                  }
+                  return h
+                })(),
+              }, (proxyRes) => {
+                const skip = new Set(['transfer-encoding', 'connection', 'keep-alive'])
+                for (const [k, v] of Object.entries(proxyRes.headers)) {
+                  if (!skip.has(k.toLowerCase()) && v != null) res.setHeader(k, v as string)
+                }
+                res.statusCode = proxyRes.statusCode ?? 200
+                proxyRes.pipe(res)
+                proxyRes.on('end', resolve)
+              })
+              proxyReq.on('error', reject)
+              req.pipe(proxyReq)
+            })
+          } catch (err) {
+            console.error('[python-proxy]', err)
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: 'Python backend unreachable' }))
+          }
+          return
+        }
+
         // ── R2 presign (refresh URL for existing key) ─────────────────────────
         if (url.startsWith('/api/r2/presign') && req.method === 'GET') {
           try {
@@ -681,7 +723,8 @@ export default defineConfig({
             url.startsWith('/api/r2') ||
             url.startsWith('/api/conversions') ||
             url.startsWith('/api/payment') ||
-            url.startsWith('/api/profile')
+            url.startsWith('/api/profile') ||
+            url.startsWith('/api/python')
           ) return url
           return null
         },

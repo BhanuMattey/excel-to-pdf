@@ -1,6 +1,12 @@
 import axios, { AxiosProgressEvent } from 'axios'
 
-const API_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+// Always proxy through our own origin to avoid mixed-content blocks.
+// In dev Vite forwards /api/python/* to the local Express server which
+// in turn proxies to the Python backend. In prod, Vercel routes
+// /api/python/* to the serverless proxy function.
+const API_URL = typeof window !== 'undefined'
+  ? `${window.location.origin}/api/python`
+  : '/api/python'
 
 const apiClient = axios.create({
   baseURL: API_URL,
