@@ -2,15 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const PYTHON_BASE = process.env.PYTHON_API_URL || 'http://153.75.250.227:8000'
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathSegments = (req.query.path as string[]) ?? []
-  // Proxy strips the /api/python prefix; Python expects /api/* routes
   const targetPath = '/api/' + pathSegments.join('/')
 
   const search = new URLSearchParams()
@@ -22,16 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const qs = search.toString()
   const targetUrl = `${PYTHON_BASE}${targetPath}${qs ? '?' + qs : ''}`
 
-  // Collect raw body
-  const bodyChunks: Buffer[] = []
-  await new Promise<void>((resolve, reject) => {
-    req.on('data', (chunk: Buffer) => bodyChunks.push(chunk))
-    req.on('end', resolve)
-    req.on('error', reject)
-  })
-  const rawBody = bodyChunks.length > 0 ? Buffer.concat(bodyChunks) : undefined
-
-  // Forward headers — strip host so the Python server sees its own host
+  // Forward headers — strip host so Python sees its own host
   const forwardHeaders: Record<string, string> = {}
   for (const [k, v] of Object.entries(req.headers)) {
     if (k.toLowerCase() === 'host') continue
@@ -39,10 +23,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     else if (v != null) forwardHeaders[k] = v
   }
 
+  // @vercel/node reads the body stream into req.body for non-multipart requests,
+  // but for multipart/form-data it pipes the raw stream through unparsed.
+  // We need to forward the raw body in all cases.
+  let body: Buffer | undefined
+  const contentType = (req.headers['content-type'] ?? '').toLowerCase()
+
+  if (contentType.includes('multipart/form-data')) {
+    // Raw stream — collect chunks directly
+    const chunks: Buffer[] = []
+    await new Promise<void>((resolve, reject) => {
+      req.on('data', (chunk: Buffer) => chunks.push(chunk))
+      req.on('end', resolve)
+      req.on('error', reject)
+    })
+    body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
+  } else if (req.body != null) {
+    // Already parsed by @vercel/node — re-serialize
+    body = Buffer.from(
+      typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
+    )
+    if (!forwardHeaders['content-type']) {
+      forwardHeaders['content-type'] = 'application/json'
+    }
+  }
+
   const upstream = await fetch(targetUrl, {
     method: req.method,
     headers: forwardHeaders,
-    body: rawBody && rawBody.length > 0 ? rawBody : undefined,
+    body: body && body.length > 0 ? body : undefined,
   })
 
   // Forward response headers (skip ones Vercel manages)
@@ -52,7 +61,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
 
   res.status(upstream.status)
-
   const buf = Buffer.from(await upstream.arrayBuffer())
   res.end(buf)
 }
