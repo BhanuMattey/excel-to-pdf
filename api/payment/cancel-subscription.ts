@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { profiles } from '../../src/db/schema'
 import { eq } from 'drizzle-orm'
+import { createPool, createDb } from '../_db'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
@@ -25,8 +24,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(502).json({ detail: err?.error?.description || 'Cancellation failed' })
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  const d = drizzle(pool)
+  const pool = createPool()
+  const d = createDb(pool)
   try {
     await d.update(profiles).set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })
       .where(eq(profiles.id, body.user_email))

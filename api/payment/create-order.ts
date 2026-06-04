@@ -1,9 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { randomUUID } from 'crypto'
 import { payments, profiles } from '../../src/db/schema'
 import { eq } from 'drizzle-orm'
+import { createPool, createDb } from '../_db'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
@@ -39,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const amount = PLAN_AMOUNTS[planId]
   if (!amount) return res.status(400).json({ detail: `Unknown plan_id: ${planId}` })
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  const d = drizzle(pool)
+  const pool = createPool()
+  const d = createDb(pool)
 
   try {
     // Try subscription first

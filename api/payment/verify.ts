@@ -1,9 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { createHmac } from 'crypto'
 import { payments, profiles } from '../../src/db/schema'
 import { eq } from 'drizzle-orm'
+import { createPool, createDb } from '../_db'
 
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
 
@@ -27,8 +26,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const expected = createHmac('sha256', RAZORPAY_KEY_SECRET).update(sigBase).digest('hex')
   if (expected !== body.razorpay_signature) return res.status(400).json({ detail: 'Invalid payment signature' })
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  const d = drizzle(pool)
+  const pool = createPool()
+  const d = createDb(pool)
   try {
     const recordId = body.razorpay_subscription_id || body.razorpay_order_id || ''
     await d.update(payments).set({

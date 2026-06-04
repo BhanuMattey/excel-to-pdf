@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { eq } from 'drizzle-orm'
 import { conversions } from '../../src/db/schema'
+import { createPool, createDb } from '../_db'
 
 type DbRow = typeof conversions.$inferSelect
 function toSnake(row: DbRow) {
@@ -24,8 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
   const id = req.query.id as string
   const { status, output_url, r2_key, expires_at } = req.body as Record<string, unknown>
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  const d = drizzle(pool)
+  const pool = createPool()
+  const d = createDb(pool)
   try {
     const [row] = await d.update(conversions).set({
       status: status as string,

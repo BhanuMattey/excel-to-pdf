@@ -1,15 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { eq } from 'drizzle-orm'
 import { conversions } from '../../src/db/schema'
+import { createPool, createDb } from '../_db'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
   const userId = req.query.user_id as string
   if (!userId) return res.status(400).json({ error: 'user_id required' })
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  const d = drizzle(pool)
+  const pool = createPool()
+  const d = createDb(pool)
   try {
     const rows = await d.select({ id: conversions.id }).from(conversions).where(eq(conversions.userId, userId))
     return res.json({ count: rows.length })

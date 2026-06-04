@@ -1,13 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
 import { eq, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 import { conversions } from '../../src/db/schema'
+import { createPool, createDb } from '../_db'
 
 function db() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  return { db: drizzle(pool), pool }
+  const pool = createPool()
+  return { db: createDb(pool), pool }
 }
 
 type DbRow = typeof conversions.$inferSelect
