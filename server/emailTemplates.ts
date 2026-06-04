@@ -95,7 +95,7 @@ function divider(): string {
 
 // ─── Password Reset ────────────────────────────────────────────────────────────
 
-export function resetPasswordEmail(name: string, resetUrl: string): string {
+export function resetPasswordEmail(name: string, resetUrl: string, appUrl = 'https://www.excelfrompdf.com'): string {
   const displayName = name || 'there'
 
   const content = `
@@ -132,7 +132,7 @@ export function resetPasswordEmail(name: string, resetUrl: string): string {
                    padding:12px 16px;">
           <p style="font-size:13px;color:#92400e;margin:0;">
             ⏱ This link expires in <strong>1 hour</strong>. If it expires, you can
-            <a href="http://localhost:3000/forgot-password" style="color:#166534;font-weight:600;text-decoration:none;">
+            <a href="${appUrl}/forgot-password" style="color:#166534;font-weight:600;text-decoration:none;">
               request a new one
             </a>.
           </p>

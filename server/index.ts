@@ -9,8 +9,11 @@ import { uploadToR2, getPresignedUrl, deleteFromR2 } from './r2'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { conversions } from '../src/db/schema'
+import { user as userTable, verification } from '../auth-schema'
 import { lt, eq, desc } from 'drizzle-orm'
-import { randomUUID } from 'crypto'
+import { randomUUID, randomBytes } from 'crypto'
+import { sendEmail } from './resend'
+import { resetPasswordEmail } from './emailTemplates'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST_DIR = path.resolve(__dirname, '../dist')
@@ -166,6 +169,49 @@ app.get('/api/conversions', async (req, res) => {
   } catch (err) {
     console.error('[conversions/list]', err)
     res.status(500).json({ error: 'Failed to fetch conversions' })
+  }
+})
+
+// ─── Forgot password ─────────────────────────────────────────────────────────
+// Generates a reset token in the verification table (same table Neon Auth reads)
+// and sends the email via Resend — bypassing Neon Auth's own email entirely.
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body as { email?: string }
+  if (!email) { res.status(400).json({ error: 'email is required' }); return }
+
+  // Always respond with success to avoid leaking whether the email exists
+  res.json({ ok: true })
+
+  try {
+    const [foundUser] = await db.select({ id: userTable.id, name: userTable.name })
+      .from(userTable).where(eq(userTable.email, email.toLowerCase().trim())).limit(1)
+
+    if (!foundUser) return // silently skip — response already sent
+
+    const token = randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+
+    // Delete any existing reset token for this email before inserting a new one
+    await db.delete(verification).where(eq(verification.identifier, `reset-password:${email}`))
+
+    await db.insert(verification).values({
+      id: randomUUID(),
+      identifier: `reset-password:${email}`,
+      value: token,
+      expiresAt,
+    })
+
+    const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000'
+    const resetUrl = `${appUrl}/reset-password?token=${token}`
+
+    await sendEmail({
+      to: email,
+      subject: 'Reset your ExcelfromPDF password',
+      html: resetPasswordEmail(foundUser.name, resetUrl, appUrl),
+    })
+  } catch (err) {
+    console.error('[forgot-password]', err)
+    // Don't surface to client — response already sent
   }
 })
 

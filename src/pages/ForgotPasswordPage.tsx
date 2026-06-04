@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 import { isValidEmail } from '../utils/helpers'
-import { authClient } from '../lib/auth-client'
 import toast from 'react-hot-toast'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('')
@@ -21,13 +22,12 @@ const ForgotPasswordPage = () => {
 
     setLoading(true)
     try {
-      const redirectTo = `${window.location.origin}/reset-password`
-      const result = await authClient.requestPasswordReset({ email: email.trim(), redirectTo })
-
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to send reset email. Please try again.')
-      }
-
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      if (!res.ok) throw new Error('Failed to send reset email. Please try again.')
       setSent(true)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
