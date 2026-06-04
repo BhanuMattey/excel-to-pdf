@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http'
-import { getPresignedUrl } from '../_r2'
+import { getPresignedUrl } from '../_r2.js'
 
 type RequestWithQuery = IncomingMessage & {
   method?: string

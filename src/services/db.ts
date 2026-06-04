@@ -8,8 +8,14 @@ const r2Api = axios.create({ baseURL: r2ApiBase, timeout: 30000, withCredentials
 const api = axios.create({ baseURL: apiBase, timeout: 30000, withCredentials: true })
 
 const handle = <T>(promise: Promise<{ data: T }>): Promise<T> =>
-  promise.then(r => r.data).catch((e: AxiosError<{ error?: string; detail?: string }>) => {
-    throw new Error(e.response?.data?.error || e.response?.data?.detail || e.message)
+  promise.then(r => r.data).catch((e: AxiosError<{ error?: unknown; detail?: unknown; message?: string }>) => {
+    const errField = e.response?.data?.error
+    const detailField = e.response?.data?.detail
+    const errStr = typeof errField === 'string' ? errField
+      : typeof detailField === 'string' ? detailField
+      : typeof errField === 'object' && errField !== null ? JSON.stringify(errField)
+      : e.message
+    throw new Error(errStr)
   })
 
 export interface ConversionRecord {

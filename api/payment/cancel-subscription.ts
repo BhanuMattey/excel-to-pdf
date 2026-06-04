@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { profiles } from '../../src/db/schema'
+import { profiles } from '../../src/db/schema.js'
 import { eq } from 'drizzle-orm'
-import { createDb } from '../_db'
+import { createDb } from '../_db.js'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''

@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { eq, desc } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
-import { conversions } from '../../src/db/schema'
-import { createDb } from '../_db'
+import { conversions } from '../../src/db/schema.js'
+import { createDb } from '../_db.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const d = createDb()
