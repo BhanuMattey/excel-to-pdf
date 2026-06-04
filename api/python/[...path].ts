@@ -26,19 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // bodyParser is disabled — always read the raw stream
-  let body: Buffer | undefined
-  const chunks: Buffer[] = []
+  const chunks: Uint8Array[] = []
   await new Promise<void>((resolve, reject) => {
-    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('data', (chunk: Uint8Array) => chunks.push(chunk))
     req.on('end', resolve)
     req.on('error', reject)
   })
-  if (chunks.length > 0) body = Buffer.concat(chunks)
+  const bodyBytes = chunks.length > 0
+    ? chunks.reduce((acc, c) => { const merged = new Uint8Array(acc.length + c.length); merged.set(acc); merged.set(c, acc.length); return merged }, new Uint8Array(0))
+    : null
 
   const upstream = await fetch(targetUrl, {
     method: req.method,
     headers: forwardHeaders,
-    body: body && body.length > 0 ? body : undefined,
+    body: bodyBytes && bodyBytes.length > 0 ? bodyBytes : null,
   })
 
   // Forward response headers (skip ones Vercel manages)
@@ -48,6 +49,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
 
   res.status(upstream.status)
-  const buf = Buffer.from(await upstream.arrayBuffer())
-  res.end(buf)
+  res.end(new Uint8Array(await upstream.arrayBuffer()))
 }
