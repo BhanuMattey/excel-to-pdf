@@ -12,8 +12,8 @@ const handle = <T>(promise: Promise<{ data: T }>): Promise<T> =>
     throw new Error(e.response?.data?.detail || e.response?.data?.message || e.message)
   })
 
-// Optional app backend for conversion history/R2. Static deployments do not have this.
-const localBase = LOCAL_API_URL || ''
+// Optional app backend for R2 file storage. On Vercel this is same-origin.
+const localBase = LOCAL_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
 const local = axios.create({ baseURL: localBase, timeout: 30000 })
 local.defaults.withCredentials = true
