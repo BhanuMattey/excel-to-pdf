@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios'
+import { neon } from '../lib/neon-client'
 
 const API_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 const LOCAL_API_URL = import.meta.env.VITE_LOCAL_API_URL
@@ -22,6 +23,13 @@ const handleLocal = <T>(promise: Promise<{ data: T }>): Promise<T> =>
     throw new Error(e.response?.data?.error || e.message)
   })
 
+const handleNeon = <T>(result: { data: T | null; error: { message?: string } | null }): T => {
+  if (result.error) throw new Error(result.error.message || 'Database request failed')
+  return result.data as T
+}
+
+const nowIso = () => new Date().toISOString()
+
 export interface ConversionRecord {
   id: string
   user_id?: string
@@ -35,40 +43,99 @@ export interface ConversionRecord {
 }
 
 export const conversionService = {
-  createConversion: (userId: string, fileName: string, fileSize?: number) =>
-    localBase
-      ? handleLocal(local.post('/api/conversions', {
+  createConversion: async (userId: string, fileName: string, fileSize?: number) => {
+    if (neon) {
+      const id = crypto.randomUUID()
+      const createdAt = nowIso()
+      const result = await neon
+        .from('conversions')
+        .insert({
+          id,
+          user_id: userId,
+          file_name: fileName,
+          file_size: fileSize ?? null,
+          status: 'processing',
+          created_at: createdAt,
+          updated_at: createdAt,
+        })
+        .select()
+        .single()
+      return handleNeon<ConversionRecord>(result)
+    }
+
+    if (localBase) {
+      return handleLocal(local.post('/api/conversions', {
         user_id: userId,
         file_name: fileName,
         file_size: fileSize ?? null,
         status: 'processing',
       }))
-      : Promise.reject(new Error('Conversion history API is not configured')),
+    }
 
-  updateConversionStatus: (
+    throw new Error('Conversion history API is not configured')
+  },
+
+  updateConversionStatus: async (
     id: string,
     status: string,
     extra: { outputUrl?: string | null; r2Key?: string | null; expiresAt?: string | null } = {}
-  ) =>
-    localBase
-      ? handleLocal(local.patch(`/api/conversions/${id}`, {
+  ) => {
+    if (neon) {
+      const result = await neon
+        .from('conversions')
+        .update({
+          status,
+          output_url: extra.outputUrl ?? null,
+          r2_key: extra.r2Key ?? null,
+          expires_at: extra.expiresAt ?? null,
+          updated_at: nowIso(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
+      return handleNeon<ConversionRecord>(result)
+    }
+
+    if (localBase) {
+      return handleLocal(local.patch(`/api/conversions/${id}`, {
         status,
         output_url: extra.outputUrl ?? null,
         r2_key: extra.r2Key ?? null,
         expires_at: extra.expiresAt ?? null,
       }))
-      : Promise.resolve(null),
+    }
 
-  getUserConversions: (_userId: string): Promise<ConversionRecord[]> =>
-    localBase
-      ? handleLocal(local.get(`/api/conversions?user_id=${_userId}`))
-      : Promise.resolve([]),
+    return null
+  },
 
-  getConversionCount: (_userId: string): Promise<number> =>
-    localBase
-      ? handleLocal(local.get<{ count?: number }>(`/api/conversions/count?user_id=${_userId}`))
+  getUserConversions: async (userId: string): Promise<ConversionRecord[]> => {
+    if (neon) {
+      const result = await neon
+        .from('conversions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      return handleNeon<ConversionRecord[]>(result) ?? []
+    }
+
+    if (localBase) return handleLocal(local.get(`/api/conversions?user_id=${userId}`))
+
+    return []
+  },
+
+  getConversionCount: async (userId: string): Promise<number> => {
+    if (neon) {
+      const rows = await conversionService.getUserConversions(userId)
+      return rows.length
+    }
+
+    if (localBase) {
+      return handleLocal(local.get<{ count?: number }>(`/api/conversions/count?user_id=${userId}`))
         .then((d) => d.count ?? 0)
-      : Promise.resolve(0),
+    }
+
+    return 0
+  },
 }
 
 export const r2Service = {

@@ -120,7 +120,7 @@ export const pdfService = {
         onProgress(95)
         const res = await apiClient.get<Blob>(`/download/${jobId}`, { responseType: 'blob' })
         onProgress(100)
-        return res.data
+        return { jobId, blob: res.data }
       }
       if (data.status === 'failed') throw new Error(data.error || 'Split failed')
       if (i === 299) throw new Error('Split timeout')

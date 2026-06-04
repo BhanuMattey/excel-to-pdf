@@ -164,7 +164,9 @@ const ConversionPage = ({
             })
           } catch (r2Err) {
             console.error('[r2/upload] failed for', outputName, r2Err)
-            await conversionService.updateConversionStatus(record.id, 'completed').catch(() => {})
+            await conversionService.updateConversionStatus(record.id, 'completed', {
+              outputUrl: `/api/python/download/${blob.jobId}`,
+            }).catch(() => {})
           }
         }
         await refreshConversionCount()

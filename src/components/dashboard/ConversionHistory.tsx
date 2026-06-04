@@ -41,11 +41,12 @@ const ConversionHistory = () => {
   useEffect(() => { loadConversions() }, [loadConversions])
 
   const handleDownload = async (conv: ConversionRecord) => {
-    if (!conv.r2_key) return
+    if (!conv.r2_key && !conv.output_url) return
     setDownloadingId(conv.id)
     try {
-      // Refresh the presigned URL (original may have expired)
-      const { url } = await r2Service.getDownloadUrl(conv.r2_key)
+      const { url } = conv.r2_key
+        ? await r2Service.getDownloadUrl(conv.r2_key)
+        : { url: conv.output_url! }
       const a = document.createElement('a')
       a.href = url
       a.download = conv.file_name.replace(/\.pdf$/i, '.xlsx')
@@ -113,7 +114,7 @@ const ConversionHistory = () => {
       <div className="space-y-3 md:hidden">
         {conversions.map((conv, index) => {
           const { expired, label } = expiryInfo(conv.expires_at)
-          const canDownload = conv.status === 'completed' && conv.r2_key && !expired
+          const canDownload = conv.status === 'completed' && (conv.r2_key || conv.output_url) && !expired
 
           return (
             <motion.div
@@ -161,7 +162,7 @@ const ConversionHistory = () => {
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs text-gray-400">
                       <XCircle className="w-3.5 h-3.5" />
-                      {conv.r2_key ? 'File expired' : 'No file stored'}
+                      {conv.r2_key || conv.output_url ? 'File expired' : 'No file stored'}
                     </span>
                   )
                 ) : (
@@ -188,7 +189,7 @@ const ConversionHistory = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {conversions.map((conv, index) => {
               const { expired, label } = expiryInfo(conv.expires_at)
-              const canDownload = conv.status === 'completed' && conv.r2_key && !expired
+              const canDownload = conv.status === 'completed' && (conv.r2_key || conv.output_url) && !expired
 
               return (
                 <motion.tr
@@ -249,7 +250,7 @@ const ConversionHistory = () => {
                             : <Download className="w-4 h-4" />}
                           {downloadingId === conv.id ? 'Preparing…' : 'Download'}
                         </button>
-                      ) : !conv.r2_key ? (
+                      ) : !conv.r2_key && !conv.output_url ? (
                         <span className="inline-flex items-center gap-1 text-xs text-gray-400">
                           <XCircle className="w-3.5 h-3.5" />
                           No file stored

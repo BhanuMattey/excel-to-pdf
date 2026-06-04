@@ -31,6 +31,7 @@ interface FileConfig {
 
 interface SplitResult {
   fileName: string
+  jobId: string
   blob: Blob
 }
 
@@ -168,7 +169,7 @@ const SplitExcelPage = () => {
         const fileConfig = files[i]
         setProgress(Math.floor((i / totalFiles) * 100))
 
-        const blob = await pdfService.splitExcel(
+        const result = await pdfService.splitExcel(
           fileConfig.file,
           parseInt(fileConfig.sheetIndex),
           parseInt(fileConfig.columnIndex),
@@ -177,7 +178,7 @@ const SplitExcelPage = () => {
           }
         )
 
-        if (blob) processedResults.push({ fileName: fileConfig.file.name, blob })
+        if (result) processedResults.push({ fileName: fileConfig.file.name, jobId: result.jobId, blob: result.blob })
       }
 
       setProgress(100)
@@ -198,7 +199,9 @@ const SplitExcelPage = () => {
               })
             } catch (r2Err) {
               console.error('[r2/upload] failed for', zipName, r2Err)
-              await conversionService.updateConversionStatus(rec.id, 'completed').catch(() => {})
+              await conversionService.updateConversionStatus(rec.id, 'completed', {
+                outputUrl: `/api/python/download/${result.jobId}`,
+              }).catch(() => {})
             }
           } else {
             await conversionService.updateConversionStatus(rec.id, 'completed').catch(() => {})
