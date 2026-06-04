@@ -1,22 +1,34 @@
 import axios, { AxiosError } from 'axios'
+import { neon } from '../lib/neon-client'
 
 const LOCAL_API_URL = import.meta.env.VITE_LOCAL_API_URL
 const r2ApiBase = LOCAL_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
-const apiBase = typeof window !== 'undefined' ? window.location.origin : ''
 
 const r2Api = axios.create({ baseURL: r2ApiBase, timeout: 30000, withCredentials: true })
-const api = axios.create({ baseURL: apiBase, timeout: 30000, withCredentials: true })
 
-const handle = <T>(promise: Promise<{ data: T }>): Promise<T> =>
-  promise.then(r => r.data).catch((e: AxiosError<{ error?: unknown; detail?: unknown; message?: string }>) => {
+const handleLocal = <T>(promise: Promise<{ data: T }>): Promise<T> =>
+  promise.then((r) => r.data).catch((e: AxiosError<{ error?: unknown; detail?: unknown; message?: string }>) => {
     const errField = e.response?.data?.error
     const detailField = e.response?.data?.detail
     const errStr = typeof errField === 'string' ? errField
       : typeof detailField === 'string' ? detailField
       : typeof errField === 'object' && errField !== null ? JSON.stringify(errField)
-      : e.message
+      : e.response?.data?.message || e.message
     throw new Error(errStr)
   })
+
+const handleNeon = <T>(result: { data: T | null; error: { message?: string } | null }): T => {
+  if (result.error) {
+    const message = result.error.message || 'Database request failed'
+    if (/data api is not enabled/i.test(message)) {
+      throw new Error('Neon Data API is not enabled for this database endpoint. Enable Data API for the neondb database/branch in Neon Console, then redeploy with the matching VITE_NEON_DATA_API_URL.')
+    }
+    throw new Error(message)
+  }
+  return result.data as T
+}
+
+const nowIso = () => new Date().toISOString()
 
 export interface ConversionRecord {
   id: string
@@ -52,29 +64,62 @@ export interface PaymentRecord {
   updated_at: string | null
 }
 
-export const conversionService = {
-  createConversion: (userId: string, fileName: string, fileSize?: number): Promise<ConversionRecord> =>
-    handle(api.post('/api/conversions', {
-      user_id: userId,
-      file_name: fileName,
-      file_size: fileSize ?? null,
-      status: 'processing',
-    })),
+const requireNeon = () => {
+  if (!neon) throw new Error('Neon Data API is not configured. Set VITE_NEON_DATA_API_URL and redeploy.')
+  return neon
+}
 
-  updateConversionStatus: (
+export const conversionService = {
+  createConversion: async (userId: string, fileName: string, fileSize?: number): Promise<ConversionRecord> => {
+    const db = requireNeon()
+    const id = crypto.randomUUID()
+    const createdAt = nowIso()
+    const result = await db
+      .from('conversions')
+      .insert({
+        id,
+        user_id: userId,
+        file_name: fileName,
+        file_size: fileSize ?? null,
+        status: 'processing',
+        created_at: createdAt,
+        updated_at: createdAt,
+      })
+      .select()
+      .single()
+    return handleNeon<ConversionRecord>(result)
+  },
+
+  updateConversionStatus: async (
     id: string,
     status: string,
     extra: { outputUrl?: string | null; r2Key?: string | null; expiresAt?: string | null } = {}
-  ): Promise<ConversionRecord> =>
-    handle(api.patch(`/api/conversions/${id}`, {
-      status,
-      output_url: extra.outputUrl ?? null,
-      r2_key: extra.r2Key ?? null,
-      expires_at: extra.expiresAt ?? null,
-    })),
+  ): Promise<ConversionRecord> => {
+    const db = requireNeon()
+    const result = await db
+      .from('conversions')
+      .update({
+        status,
+        output_url: extra.outputUrl ?? null,
+        r2_key: extra.r2Key ?? null,
+        expires_at: extra.expiresAt ?? null,
+        updated_at: nowIso(),
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    return handleNeon<ConversionRecord>(result)
+  },
 
-  getUserConversions: (userId: string): Promise<ConversionRecord[]> =>
-    handle(api.get(`/api/conversions?user_id=${encodeURIComponent(userId)}`)),
+  getUserConversions: async (userId: string): Promise<ConversionRecord[]> => {
+    const db = requireNeon()
+    const result = await db
+      .from('conversions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    return handleNeon<ConversionRecord[]>(result) ?? []
+  },
 
   getConversionCount: async (userId: string): Promise<number> => {
     const rows = await conversionService.getUserConversions(userId)
@@ -86,11 +131,11 @@ export const r2Service = {
   uploadFile: (blob: Blob, filename: string): Promise<{ key: string; url: string; expiresAt: string }> => {
     const form = new FormData()
     form.append('file', blob, filename)
-    return handle(r2Api.post('/api/r2/upload', form))
+    return handleLocal(r2Api.post('/api/r2/upload', form))
   },
 
   getDownloadUrl: (key: string): Promise<{ url: string }> =>
-    handle(r2Api.get(`/api/r2/presign?key=${encodeURIComponent(key)}`)),
+    handleLocal(r2Api.get(`/api/r2/presign?key=${encodeURIComponent(key)}`)),
 }
 
 export const profileService = {
@@ -100,11 +145,42 @@ export const profileService = {
     hasPaidPayment: boolean
     latestPaidPayment: PaymentRecord | null
   }> => {
-    try {
-      const { data } = await api.get(`/api/profile?user_id=${encodeURIComponent(userId)}`)
-      return data
-    } catch {
-      return { profile: null, payments: [], hasPaidPayment: false, latestPaidPayment: null }
+    const db = requireNeon()
+    const profileResult = await db
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .limit(1)
+
+    const paymentResult = await db
+      .from('payments')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    const profileRows = handleNeon<Array<{
+      plan?: string | null
+      plan_id?: string | null
+      subscription_id?: string | null
+      subscription_status?: string | null
+      renewal_date?: string | null
+    }>>(profileResult) ?? []
+    const payments = handleNeon<PaymentRecord[]>(paymentResult) ?? []
+    const p = profileRows[0]
+    const paidPayments = payments.filter((payment) => payment.status === 'paid')
+    const latestPaidPayment = paidPayments[0] ?? null
+
+    return {
+      profile: p ? {
+        plan: p.plan === 'pro' ? 'pro' : 'free',
+        planId: p.plan_id ?? null,
+        subscriptionId: p.subscription_id ?? null,
+        subscriptionStatus: p.subscription_status ?? null,
+        renewalDate: p.renewal_date ?? null,
+      } : null,
+      payments,
+      hasPaidPayment: paidPayments.length > 0,
+      latestPaidPayment,
     }
   },
 
@@ -115,15 +191,26 @@ export const profileService = {
 
   getProfile: async (userId: string) => {
     try {
-      const { data } = await api.get(`/api/profile?user_id=${encodeURIComponent(userId)}`)
-      return data?.profile ?? null
+      const db = requireNeon()
+      const result = await db
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .limit(1)
+      return (handleNeon<unknown[]>(result) ?? [])[0] ?? null
     } catch {
       return null
     }
   },
 
   updateProfile: async (userId: string, updates: Record<string, unknown>) => {
-    const { data } = await api.patch('/api/profile', { user_id: userId, ...updates })
-    return data
+    const db = requireNeon()
+    const result = await db
+      .from('profiles')
+      .update({ ...updates, updated_at: nowIso() })
+      .eq('id', userId)
+      .select()
+      .single()
+    return handleNeon<unknown>(result)
   },
 }
