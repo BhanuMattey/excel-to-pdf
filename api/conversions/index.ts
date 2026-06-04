@@ -33,8 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[conversions]', msg)
-    return res.status(500).json({ error: 'DB error', detail: msg })
+    const stack = err instanceof Error ? err.stack : ''
+    console.error('[conversions] error:', msg)
+    console.error('[conversions] stack:', stack)
+    console.error('[conversions] DATABASE_URL set:', !!process.env.DATABASE_URL)
+    return res.status(500).json({ error: 'DB error', detail: msg, stack })
   } finally {
     await pool.end()
   }
