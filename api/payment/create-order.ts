@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomUUID } from 'crypto'
 import { payments, profiles } from '../../src/db/schema.js'
 import { eq } from 'drizzle-orm'
-import { createDb } from '../_db.js'
+import { createDb } from '../../src/server/db.js'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
@@ -129,4 +129,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ detail: 'Order creation failed' })
   }
 }
-

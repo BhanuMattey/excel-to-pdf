@@ -7,6 +7,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/python/:path*",
+      "destination": "http://153.75.250.227:8000/api/:path*"
+    },
+    {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }

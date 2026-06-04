@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createHmac } from 'crypto'
 import { payments, profiles } from '../../src/db/schema.js'
 import { eq } from 'drizzle-orm'
-import { createDb } from '../_db.js'
+import { createDb } from '../../src/server/db.js'
 
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
 

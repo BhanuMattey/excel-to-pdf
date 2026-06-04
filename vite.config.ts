@@ -144,7 +144,7 @@ function localApiPlugin() {
                   res.end(JSON.stringify({ error: 'No file provided' }))
                   return resolve()
                 }
-                const { uploadToR2, getPresignedUrl } = await import('./api/_r2')
+                const { uploadToR2, getPresignedUrl } = await import('./src/server/r2')
                 const ext = file.originalname.split('.').pop() ?? 'xlsx'
                 const key = `conversions/${randomUUID()}.${ext}`
                 console.log(`[r2/upload] uploading ${file.originalname} → ${key} (${file.size} bytes)`)
@@ -174,7 +174,7 @@ function localApiPlugin() {
               res.end(JSON.stringify({ error: 'Missing key param' }))
               return
             }
-            const { getPresignedUrl } = await import('./api/_r2')
+            const { getPresignedUrl } = await import('./src/server/r2')
             const presignedUrl = await getPresignedUrl(key)
             res.end(JSON.stringify({ url: presignedUrl }))
           } catch (err) {
@@ -189,7 +189,7 @@ function localApiPlugin() {
         if (url === '/api/r2/health' && req.method === 'GET') {
           res.setHeader('Content-Type', 'application/json')
           try {
-            const { uploadToR2, deleteFromR2 } = await import('./api/_r2')
+            const { uploadToR2, deleteFromR2 } = await import('./src/server/r2')
             const testKey = `health-check/${randomUUID()}.txt`
             await uploadToR2(testKey, Buffer.from('ok'), 'text/plain')
             await deleteFromR2(testKey)
@@ -536,7 +536,7 @@ function localApiPlugin() {
               res.end(JSON.stringify({ error: 'key is required' }))
               return
             }
-            const { getPresignedUrl } = await import('./api/_r2')
+            const { getPresignedUrl } = await import('./src/server/r2')
             const fileUrl = await getPresignedUrl(key)
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({ url: fileUrl }))
