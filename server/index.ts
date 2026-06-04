@@ -24,7 +24,10 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   process.env.VITE_APP_URL || 'http://localhost:3000',
-].filter(Boolean)
+  // www subdomain must be explicitly allowed — browsers send preflight from
+  // the exact origin and a www→non-www redirect breaks the preflight check
+  process.env.VITE_APP_URL ? process.env.VITE_APP_URL.replace('://', '://www.') : null,
+].filter(Boolean) as string[]
 
 app.use(cors({
   origin: allowedOrigins,

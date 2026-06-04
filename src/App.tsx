@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
@@ -56,6 +58,8 @@ function App() {
         <Route path="/profile" element={<Navigate to="/dashboard#profile" replace />} />
       </Routes>
       <AuthPromptModal isOpen={showAuthPrompt} onClose={closeAuthPrompt} />
+      <Analytics />
+      <SpeedInsights />
     </>
   )
 }
