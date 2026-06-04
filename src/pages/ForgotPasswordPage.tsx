@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 import { isValidEmail } from '../utils/helpers'
+import { authClient } from '../lib/auth-client'
 import toast from 'react-hot-toast'
 
 const ForgotPasswordPage = () => {
@@ -21,16 +22,10 @@ const ForgotPasswordPage = () => {
     setLoading(true)
     try {
       const redirectTo = `${window.location.origin}/reset-password`
-      const res = await fetch('/api/auth/request-password-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), redirectTo }),
-      })
+      const result = await authClient.requestPasswordReset({ email: email.trim(), redirectTo })
 
-      // better-auth returns 200 even if email doesn't exist (security), so treat any 2xx as success
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { message?: string }
-        throw new Error(data.message || 'Failed to send reset email. Please try again.')
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to send reset email. Please try again.')
       }
 
       setSent(true)

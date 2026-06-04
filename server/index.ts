@@ -5,8 +5,6 @@ import multer from 'multer'
 import path from 'path'
 import { existsSync } from 'fs'
 import { fileURLToPath } from 'url'
-import { toNodeHandler } from 'better-auth/node'
-import { auth } from './auth'
 import { uploadToR2, getPresignedUrl, deleteFromR2 } from './r2'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
@@ -33,9 +31,6 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true,
 }))
-
-// better-auth must handle raw body — do NOT put express.json() before it
-app.all('/api/auth/*', toNodeHandler(auth))
 
 app.use(express.json())
 

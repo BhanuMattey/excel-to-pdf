@@ -2,7 +2,7 @@ import { pgTable, text, integer, bigint, timestamp, doublePrecision } from 'driz
 import { relations } from 'drizzle-orm'
 
 // App-specific tables only.
-// Auth tables (user, session, account, verification) are managed by better-auth in auth-schema.ts
+// Auth identities are managed by Neon Auth.
 
 export const conversions = pgTable('conversions', {
   id: text('id').primaryKey(),

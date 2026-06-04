@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { toNodeHandler } from 'better-auth/node'
 import multer from 'multer'
 import { randomUUID, createHmac } from 'crypto'
 import type { IncomingMessage, ServerResponse } from 'http'
@@ -122,8 +121,7 @@ function readBody(req: IncomingMessage): Promise<string> {
   })
 }
 
-// Dev-only plugin: mounts better-auth + R2 endpoints inside Vite's server.
-// Both /api/auth/* and /api/r2/* are handled on port 3000 — no second process.
+// Dev-only plugin: mounts local API helpers inside Vite's server.
 function localApiPlugin() {
   return {
     name: 'local-api-dev',
@@ -134,17 +132,6 @@ function localApiPlugin() {
 
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || ''
-
-        // ── better-auth ──────────────────────────────────────────────────────
-        if (url.startsWith('/api/auth')) {
-          try {
-            const { auth } = await import('./server/auth')
-            return toNodeHandler(auth)(req as never, res as never)
-          } catch (err) {
-            console.error('[auth-plugin]', err)
-            return next()
-          }
-        }
 
         // ── R2 upload ─────────────────────────────────────────────────────────
         if (url.startsWith('/api/r2/upload') && req.method === 'POST') {
@@ -682,7 +669,7 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // /api/auth and /api/r2 are handled by localApiPlugin above (same port).
+      // /api/r2 is handled by localApiPlugin above (same port).
       // Everything else under /api goes to the Python backend.
       '/api': {
         target: 'http://153.75.250.227:8000',
@@ -691,7 +678,6 @@ export default defineConfig({
           const url = req.url || ''
           // Let the local plugin handle these — don't proxy them to Python backend
           if (
-            url.startsWith('/api/auth') ||
             url.startsWith('/api/r2') ||
             url.startsWith('/api/conversions') ||
             url.startsWith('/api/payment') ||

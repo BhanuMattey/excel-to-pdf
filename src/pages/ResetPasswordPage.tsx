@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { validatePassword } from '../utils/helpers'
+import { authClient } from '../lib/auth-client'
 import toast from 'react-hot-toast'
 
 const ResetPasswordPage = () => {
@@ -44,16 +45,10 @@ const ResetPasswordPage = () => {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: password }),
-        credentials: 'include',
-      })
+      const result = await authClient.resetPassword({ token, newPassword: password })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { message?: string }
-        throw new Error(data.message || 'Failed to reset password. The link may have expired.')
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to reset password. The link may have expired.')
       }
 
       setDone(true)

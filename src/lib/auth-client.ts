@@ -1,11 +1,14 @@
-import { createAuthClient } from 'better-auth/react'
-import { sentinelClient } from '@better-auth/infra/client'
+import { createAuthClient } from '@neondatabase/neon-js/auth'
+import { BetterAuthReactAdapter } from '@neondatabase/neon-js/auth/react'
 
-export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:3000',
-  plugins: [
-    sentinelClient(),
-  ],
+const neonAuthUrl = import.meta.env.VITE_NEON_AUTH_URL
+
+if (!neonAuthUrl) {
+  throw new Error('Missing VITE_NEON_AUTH_URL')
+}
+
+export const authClient = createAuthClient(neonAuthUrl, {
+  adapter: BetterAuthReactAdapter(),
 })
 
-export const { signIn, signUp, signOut, useSession, getSession } = authClient
+export const { signIn, signUp, signOut, useSession, getSession, requestPasswordReset, resetPassword } = authClient
