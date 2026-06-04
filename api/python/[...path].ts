@@ -16,6 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const qs = search.toString()
   const targetUrl = `${PYTHON_BASE}${targetPath}${qs ? '?' + qs : ''}`
+  console.log('[python-proxy]', req.method, targetUrl, 'content-type:', req.headers['content-type'])
 
   // Forward headers — strip host so Python sees its own host
   const forwardHeaders: Record<string, string> = {}
@@ -48,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!skip.has(key.toLowerCase())) res.setHeader(key, value)
   })
 
+  console.log('[python-proxy] upstream status:', upstream.status, 'body-bytes:', bodyBytes?.length ?? 0)
   res.status(upstream.status)
   res.end(new Uint8Array(await upstream.arrayBuffer()))
 }
