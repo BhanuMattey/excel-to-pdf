@@ -14,6 +14,7 @@ function cleanDatabaseUrl(url: string): string {
 
 export function createPool() {
   const raw = process.env.DATABASE_URL || ''
+  if (!raw) throw new Error('DATABASE_URL env var is not set')
   const connectionString = cleanDatabaseUrl(raw)
   const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } })
   return pool
