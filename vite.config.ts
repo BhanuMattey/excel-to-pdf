@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import multer from 'multer'
-import { randomUUID, createHmac } from 'crypto'
+import { randomUUID, createHmac, randomBytes } from 'crypto'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { config as loadDotenv } from 'dotenv'
 
@@ -637,6 +637,64 @@ function localApiPlugin() {
           return
         }
 
+        // ── Forgot password ───────────────────────────────────────────────────
+        if (url === '/api/auth/forgot-password' && req.method === 'POST') {
+          res.setHeader('Content-Type', 'application/json')
+          const body = JSON.parse(await readBody(req)) as { email?: string }
+          if (!body.email) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: 'email is required' }))
+            return
+          }
+          // Respond immediately to prevent enumeration
+          res.statusCode = 200
+          res.end(JSON.stringify({ ok: true }))
+
+          try {
+            const { drizzle } = await import('drizzle-orm/node-postgres')
+            const { Pool } = await import('pg')
+            const { eq } = await import('drizzle-orm')
+            const { user: userTable, verification } = await import('./auth-schema')
+            const { sendEmail } = await import('./server/resend')
+            const { resetPasswordEmail } = await import('./server/emailTemplates')
+
+            const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+            const db = drizzle(pool)
+            const email = body.email.toLowerCase().trim()
+
+            const [foundUser] = await db
+              .select({ id: userTable.id, name: userTable.name })
+              .from(userTable)
+              .where(eq(userTable.email, email))
+              .limit(1)
+
+            if (foundUser) {
+              const token = randomBytes(32).toString('hex')
+              const expiresAt = new Date(Date.now() + 60 * 60 * 1000)
+
+              await db.delete(verification).where(eq(verification.identifier, `reset-password:${email}`))
+              await db.insert(verification).values({
+                id: randomUUID(),
+                identifier: `reset-password:${email}`,
+                value: token,
+                expiresAt,
+              })
+
+              const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000'
+              const resetUrl = `${appUrl}/reset-password?token=${token}`
+              await sendEmail({
+                to: email,
+                subject: 'Reset your ExcelfromPDF password',
+                html: resetPasswordEmail(foundUser.name, resetUrl, appUrl),
+              })
+            }
+            await pool.end()
+          } catch (err) {
+            console.error('[forgot-password]', err)
+          }
+          return
+        }
+
         // ── R2 presign (refresh URL for existing key) ─────────────────────────
         if (url.startsWith('/api/r2/presign') && req.method === 'GET') {
           try {
@@ -681,7 +739,8 @@ export default defineConfig({
             url.startsWith('/api/r2') ||
             url.startsWith('/api/conversions') ||
             url.startsWith('/api/payment') ||
-            url.startsWith('/api/profile')
+            url.startsWith('/api/profile') ||
+            url.startsWith('/api/auth')
           ) return url
           return null
         },
