@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
+export const config = { api: { bodyParser: false } }
+
 const PYTHON_BASE = process.env.PYTHON_API_URL || 'http://153.75.250.227:8000'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -23,30 +25,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     else if (v != null) forwardHeaders[k] = v
   }
 
-  // @vercel/node reads the body stream into req.body for non-multipart requests,
-  // but for multipart/form-data it pipes the raw stream through unparsed.
-  // We need to forward the raw body in all cases.
+  // bodyParser is disabled — always read the raw stream
   let body: Buffer | undefined
-  const contentType = (req.headers['content-type'] ?? '').toLowerCase()
-
-  if (contentType.includes('multipart/form-data')) {
-    // Raw stream — collect chunks directly
-    const chunks: Buffer[] = []
-    await new Promise<void>((resolve, reject) => {
-      req.on('data', (chunk: Buffer) => chunks.push(chunk))
-      req.on('end', resolve)
-      req.on('error', reject)
-    })
-    body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
-  } else if (req.body != null) {
-    // Already parsed by @vercel/node — re-serialize
-    body = Buffer.from(
-      typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
-    )
-    if (!forwardHeaders['content-type']) {
-      forwardHeaders['content-type'] = 'application/json'
-    }
-  }
+  const chunks: Buffer[] = []
+  await new Promise<void>((resolve, reject) => {
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('end', resolve)
+    req.on('error', reject)
+  })
+  if (chunks.length > 0) body = Buffer.concat(chunks)
 
   const upstream = await fetch(targetUrl, {
     method: req.method,
