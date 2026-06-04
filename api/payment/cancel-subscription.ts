@@ -9,7 +9,11 @@ const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const body = req.body as { subscription_id: string; user_email: string }
+  const body = req.body as { subscription_id: string; user_id?: string; user_email?: string }
+  if (!body.user_id) {
+    return res.status(400).json({ detail: 'Missing user_id' })
+  }
+
   const rzpRes = await fetch(`https://api.razorpay.com/v1/subscriptions/${body.subscription_id}/cancel`, {
     method: 'POST',
     headers: {
@@ -28,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const d = createDb(pool)
   try {
     await d.update(profiles).set({ subscriptionStatus: 'cancelled', updatedAt: new Date() })
-      .where(eq(profiles.id, body.user_email))
+      .where(eq(profiles.id, body.user_id))
     return res.json({ success: true })
   } catch (err) {
     console.error('[payment/cancel-subscription]', err)

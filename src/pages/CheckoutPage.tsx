@@ -98,7 +98,13 @@ const CheckoutPage = () => {
             if (verificationResponse.success) {
               // Update plan in context (extract base plan name from planId)
               const basePlan = paymentPlanId.split('_')[0] as 'pro' | 'free'
-              upgradePlan(basePlan)
+              upgradePlan(basePlan, {
+                plan: basePlan,
+                planId: paymentPlanId,
+                subscriptionId: (response.razorpay_subscription_id as string) ?? null,
+                subscriptionStatus: 'active',
+                renewalDate: verificationResponse.renewal_date ?? null,
+              })
               
               toast.success('Payment successful! Your plan has been upgraded!')
               navigate('/dashboard')

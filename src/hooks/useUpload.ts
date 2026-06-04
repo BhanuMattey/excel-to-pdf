@@ -86,8 +86,8 @@ export const useUpload = () => {
           try {
             const record = await conversionService.createConversion(user.id, file.name, file.size) as ConversionRecord
             conversionRecords.push(record)
-          } catch {
-            // non-fatal — history won't show this entry
+          } catch (historyErr) {
+            throw new Error(`Failed to save conversion history: ${historyErr instanceof Error ? historyErr.message : 'Unknown database error'}`)
           }
         }
       }
@@ -115,9 +115,8 @@ export const useUpload = () => {
             })
           } catch (r2Err) {
             console.error('[r2/upload] failed for', outputName, r2Err)
-            await conversionService.updateConversionStatus(record.id, 'completed', {
-              outputUrl: `/api/python/download/${blob.jobId}`,
-            }).catch(() => {})
+            await conversionService.updateConversionStatus(record.id, 'failed').catch(() => {})
+            throw new Error(`Converted, but failed to store file in R2: ${r2Err instanceof Error ? r2Err.message : 'Unknown storage error'}`)
           }
         }
         await refreshConversionCount()

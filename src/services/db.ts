@@ -1,22 +1,13 @@
 import axios, { AxiosError } from 'axios'
 import { neon } from '../lib/neon-client'
 
-const API_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 const LOCAL_API_URL = import.meta.env.VITE_LOCAL_API_URL
 
-const http = axios.create({ baseURL: API_URL, timeout: 15000 })
-http.defaults.withCredentials = true
+// R2 file storage is handled by Vercel functions on the same origin unless overridden.
+const r2ApiBase = LOCAL_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
 
-const handle = <T>(promise: Promise<{ data: T }>): Promise<T> =>
-  promise.then((r) => r.data).catch((e: AxiosError<{ detail?: string; message?: string }>) => {
-    throw new Error(e.response?.data?.detail || e.response?.data?.message || e.message)
-  })
-
-// Optional app backend for R2 file storage. On Vercel this is same-origin.
-const localBase = LOCAL_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
-
-const local = axios.create({ baseURL: localBase, timeout: 30000 })
-local.defaults.withCredentials = true
+const r2Api = axios.create({ baseURL: r2ApiBase, timeout: 30000 })
+r2Api.defaults.withCredentials = true
 
 const handleLocal = <T>(promise: Promise<{ data: T }>): Promise<T> =>
   promise.then((r) => r.data).catch((e: AxiosError<{ error?: string }>) => {
@@ -42,6 +33,28 @@ export interface ConversionRecord {
   created_at: string
 }
 
+export interface BillingProfile {
+  plan: 'free' | 'pro'
+  planId: string | null
+  subscriptionId: string | null
+  subscriptionStatus: string | null
+  renewalDate: string | null
+}
+
+export interface PaymentRecord {
+  id: string
+  plan_id: string
+  amount: number
+  display_amount: number | null
+  currency: string
+  status: string
+  payment_type: string
+  razorpay_payment_id: string | null
+  razorpay_subscription_id: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
 export const conversionService = {
   createConversion: async (userId: string, fileName: string, fileSize?: number) => {
     if (neon) {
@@ -63,16 +76,7 @@ export const conversionService = {
       return handleNeon<ConversionRecord>(result)
     }
 
-    if (localBase) {
-      return handleLocal(local.post('/api/conversions', {
-        user_id: userId,
-        file_name: fileName,
-        file_size: fileSize ?? null,
-        status: 'processing',
-      }))
-    }
-
-    throw new Error('Conversion history API is not configured')
+    throw new Error('Neon Data API is not configured')
   },
 
   updateConversionStatus: async (
@@ -96,16 +100,7 @@ export const conversionService = {
       return handleNeon<ConversionRecord>(result)
     }
 
-    if (localBase) {
-      return handleLocal(local.patch(`/api/conversions/${id}`, {
-        status,
-        output_url: extra.outputUrl ?? null,
-        r2_key: extra.r2Key ?? null,
-        expires_at: extra.expiresAt ?? null,
-      }))
-    }
-
-    return null
+    throw new Error('Neon Data API is not configured')
   },
 
   getUserConversions: async (userId: string): Promise<ConversionRecord[]> => {
@@ -118,8 +113,6 @@ export const conversionService = {
       return handleNeon<ConversionRecord[]>(result) ?? []
     }
 
-    if (localBase) return handleLocal(local.get(`/api/conversions?user_id=${userId}`))
-
     return []
   },
 
@@ -129,11 +122,6 @@ export const conversionService = {
       return rows.length
     }
 
-    if (localBase) {
-      return handleLocal(local.get<{ count?: number }>(`/api/conversions/count?user_id=${userId}`))
-        .then((d) => d.count ?? 0)
-    }
-
     return 0
   },
 }
@@ -141,23 +129,98 @@ export const conversionService = {
 export const r2Service = {
   // Upload a Blob (the converted Excel/PDF) to R2 via the optional app backend.
   uploadFile: (blob: Blob, filename: string): Promise<{ key: string; url: string; expiresAt: string }> => {
-    if (!localBase) return Promise.reject(new Error('R2 upload API is not configured'))
     const form = new FormData()
     form.append('file', blob, filename)
-    return handleLocal(local.post('/api/r2/upload', form))
+    return handleLocal(r2Api.post('/api/r2/upload', form))
   },
 
   // Refresh a presigned download URL for an existing R2 key.
   getDownloadUrl: (key: string): Promise<{ url: string }> => {
-    if (!localBase) return Promise.reject(new Error('R2 download API is not configured'))
-    return handleLocal(local.get(`/api/r2/presign?key=${encodeURIComponent(key)}`))
+    return handleLocal(r2Api.get(`/api/r2/presign?key=${encodeURIComponent(key)}`))
   },
 }
 
 export const profileService = {
-  getProfile: (userId: string) =>
-    handle(http.get(`/api/profiles/${userId}`)).catch(() => null),
+  getBillingProfile: async (userId: string, email: string): Promise<{
+    profile: BillingProfile | null
+    payments: PaymentRecord[]
+    hasPaidPayment: boolean
+    latestPaidPayment: PaymentRecord | null
+  }> => {
+    if (neon) {
+      const profileResult = await neon
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .limit(1)
+
+      const paymentResult = await neon
+        .from('payments')
+        .select('*')
+        .eq('user_email', email)
+        .order('created_at', { ascending: false })
+
+      const profileRows = handleNeon<Array<{
+        plan?: string | null
+        plan_id?: string | null
+        subscription_id?: string | null
+        subscription_status?: string | null
+        renewal_date?: string | null
+      }>>(profileResult) ?? []
+      const payments = handleNeon<PaymentRecord[]>(paymentResult) ?? []
+      const p = profileRows[0]
+      const paidPayments = payments.filter((payment) => payment.status === 'paid')
+      const latestPaidPayment = paidPayments[0] ?? null
+
+      return {
+        profile: p ? {
+          plan: p.plan === 'pro' ? 'pro' : 'free',
+          planId: p.plan_id ?? null,
+          subscriptionId: p.subscription_id ?? null,
+          subscriptionStatus: p.subscription_status ?? null,
+          renewalDate: p.renewal_date ?? null,
+        } : null,
+        payments,
+        hasPaidPayment: paidPayments.length > 0,
+        latestPaidPayment,
+      }
+    }
+
+    return {
+      profile: null,
+      payments: [],
+      hasPaidPayment: false,
+      latestPaidPayment: null,
+    }
+  },
+
+  getPayments: async (userId: string, email: string): Promise<PaymentRecord[]> => {
+    const billing = await profileService.getBillingProfile(userId, email)
+    return billing.payments
+  },
+
+  getProfile: async (userId: string) => {
+    if (!neon) return null
+    try {
+      const result = await neon
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .limit(1)
+      return (handleNeon<unknown[]>(result) ?? [])[0] ?? null
+    } catch {
+      return null
+    }
+  },
 
   updateProfile: (userId: string, updates: Record<string, unknown>) =>
-    handle(http.put(`/api/profiles/${userId}`, updates)),
+    neon
+      ? neon
+        .from('profiles')
+        .update({ ...updates, updated_at: nowIso() })
+        .eq('id', userId)
+        .select()
+        .single()
+        .then((result) => handleNeon<unknown>(result))
+      : Promise.reject(new Error('Profile API is not configured')),
 }

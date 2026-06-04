@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import multer from 'multer'
 import { randomUUID } from 'crypto'
-import { uploadToR2, getPresignedUrl } from '../../server/r2'
+import { uploadToR2, getPresignedUrl } from '../_r2'
 
 export const config = {
   api: {

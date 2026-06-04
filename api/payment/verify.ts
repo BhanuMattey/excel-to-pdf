@@ -19,6 +19,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     user_id?: string
   }
 
+  if (!body.user_id) {
+    return res.status(400).json({ detail: 'Missing user_id' })
+  }
+
   const sigBase = body.razorpay_subscription_id
     ? `${body.razorpay_payment_id}|${body.razorpay_subscription_id}`
     : `${body.razorpay_order_id}|${body.razorpay_payment_id}`
@@ -31,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const recordId = body.razorpay_subscription_id || body.razorpay_order_id || ''
     await d.update(payments).set({
+      userId: body.user_id,
       status: 'paid',
       razorpayPaymentId: body.razorpay_payment_id,
       razorpaySignature: body.razorpay_signature,
@@ -43,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     else renewalDate.setMonth(renewalDate.getMonth() + 1)
 
     const basePlan = body.plan_id.split('_')[0]
-    const existing = await d.select().from(profiles).where(eq(profiles.id, body.user_email))
+    const existing = await d.select().from(profiles).where(eq(profiles.id, body.user_id))
     const update = {
       plan: basePlan,
       planId: body.plan_id,
@@ -53,9 +58,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updatedAt: new Date(),
     }
     if (existing.length > 0) {
-      await d.update(profiles).set(update).where(eq(profiles.id, body.user_email))
+      await d.update(profiles).set(update).where(eq(profiles.id, body.user_id))
     } else {
-      await d.insert(profiles).values({ id: body.user_email, ...update })
+      await d.insert(profiles).values({ id: body.user_id, ...update })
     }
 
     return res.json({ success: true, plan: basePlan, renewal_date: renewalDate.toISOString() })

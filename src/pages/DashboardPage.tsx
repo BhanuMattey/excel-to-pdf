@@ -23,6 +23,7 @@ import { UsageStats, ConversionHistory } from '../components/dashboard'
 import { UploadBox } from '../components/upload'
 import { useAuth } from '../context/AuthContext'
 import { usePlan } from '../context/PlanContext'
+import { profileService } from '../services/db'
 import { paymentService } from '../services/payment'
 import toast from 'react-hot-toast'
 
@@ -163,18 +164,17 @@ const DashboardPage = () => {
   const isCancelled = planProfile?.subscriptionStatus === 'cancelled'
 
   const loadPayments = useCallback(async () => {
-    if (!user?.email) return
+    if (!user?.id || !user?.email) return
     setLoadingPayments(true)
     try {
-      const res = await fetch(`/api/profile?email=${encodeURIComponent(user.email)}`, { credentials: 'include' })
-      const data = await res.json() as { payments?: PaymentRecord[] }
-      setPayments(data.payments?.filter(p => p.status === 'paid') ?? [])
+      const data = await profileService.getPayments(user.id, user.email)
+      setPayments(data.filter(p => p.status === 'paid'))
     } catch {
       // non-fatal
     } finally {
       setLoadingPayments(false)
     }
-  }, [user?.email])
+  }, [user?.id, user?.email])
 
   // Load payments when switching to profile tab
   useEffect(() => {
@@ -182,10 +182,10 @@ const DashboardPage = () => {
   }, [activeTab, loadPayments])
 
   const handleCancelSubscription = async () => {
-    if (!user?.email || !planProfile?.subscriptionId) return
+    if (!user?.id || !user?.email || !planProfile?.subscriptionId) return
     setCancelling(true)
     try {
-      await paymentService.cancelSubscription(planProfile.subscriptionId, user.email)
+      await paymentService.cancelSubscription(planProfile.subscriptionId, user.id, user.email)
       await refreshPlan()
       toast.success('Subscription cancelled. Access continues until end of billing period.')
       setShowCancelConfirm(false)

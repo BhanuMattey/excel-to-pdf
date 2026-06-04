@@ -69,7 +69,7 @@ const sections = [
     title: 'Third-Party Services',
     content: [
       'Neon / Postgres for secure database storage.',
-      'Better-Auth for authentication and session management.',
+      'Neon Auth for authentication and session management.',
       'Razorpay for payment processing — we never store card details.',
       'Analytics tools for aggregate usage insights — no personally identifiable data exported.',
       'All third-party services operate under their own privacy policies and applicable data protection laws.',

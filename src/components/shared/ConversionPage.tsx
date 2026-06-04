@@ -133,20 +133,21 @@ const ConversionPage = ({
     setProgress(0)
     setResults([])
 
-    // Create DB records before processing so history shows even on failure
     const conversionRecords: { id: string }[] = []
-    if (user) {
-      for (const file of files) {
-        try {
-          const record = await conversionService.createConversion(user.id, file.name, file.size) as { id: string }
-          conversionRecords.push(record)
-        } catch {
-          // non-fatal
-        }
-      }
-    }
 
     try {
+      // Create DB records before processing so history shows even on failure.
+      if (user) {
+        for (const file of files) {
+          try {
+            const record = await conversionService.createConversion(user.id, file.name, file.size) as { id: string }
+            conversionRecords.push(record)
+          } catch (historyErr) {
+            throw new Error(`Failed to save conversion history: ${historyErr instanceof Error ? historyErr.message : 'Unknown database error'}`)
+          }
+        }
+      }
+
       const blobs = await serviceCall(files, setProgress)
       setResults(blobs)
 
@@ -164,9 +165,8 @@ const ConversionPage = ({
             })
           } catch (r2Err) {
             console.error('[r2/upload] failed for', outputName, r2Err)
-            await conversionService.updateConversionStatus(record.id, 'completed', {
-              outputUrl: `/api/python/download/${blob.jobId}`,
-            }).catch(() => {})
+            await conversionService.updateConversionStatus(record.id, 'failed').catch(() => {})
+            throw new Error(`Converted, but failed to store file in R2: ${r2Err instanceof Error ? r2Err.message : 'Unknown storage error'}`)
           }
         }
         await refreshConversionCount()

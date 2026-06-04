@@ -51,10 +51,11 @@ export const paymentService = {
     }
   },
 
-  async cancelSubscription(subscriptionId: string, userEmail: string) {
+  async cancelSubscription(subscriptionId: string, userId: string, userEmail: string) {
     try {
       const response = await axios.post(`${PAYMENT_API_BASE_URL}/api/payment/cancel-subscription`, {
         subscription_id: subscriptionId,
+        user_id: userId,
         user_email: userEmail,
       })
       return response.data

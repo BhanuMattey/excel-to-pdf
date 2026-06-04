@@ -1,8 +1,10 @@
-import { pgTable, text, integer, bigint, timestamp, doublePrecision } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { pgTable, text, integer, bigint, timestamp, doublePrecision, pgPolicy, pgRole } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
 
 // App-specific tables only.
 // Auth identities are managed by Neon Auth.
+
+export const authenticatedRole = pgRole('authenticated').existing()
 
 export const conversions = pgTable('conversions', {
   id: text('id').primaryKey(),
@@ -16,7 +18,24 @@ export const conversions = pgTable('conversions', {
   expiresAt: timestamp('expires_at'), // 24h after creation — file deleted from R2 after this
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-})
+}, (table) => [
+  pgPolicy('conversions_select_own', {
+    for: 'select',
+    to: authenticatedRole,
+    using: sql`(select auth.user_id() = ${table.userId})`,
+  }),
+  pgPolicy('conversions_insert_own', {
+    for: 'insert',
+    to: authenticatedRole,
+    withCheck: sql`(select auth.user_id() = ${table.userId})`,
+  }),
+  pgPolicy('conversions_update_own', {
+    for: 'update',
+    to: authenticatedRole,
+    using: sql`(select auth.user_id() = ${table.userId})`,
+    withCheck: sql`(select auth.user_id() = ${table.userId})`,
+  }),
+]).enableRLS()
 
 export const profiles = pgTable('profiles', {
   id: text('id').primaryKey(),
@@ -28,7 +47,24 @@ export const profiles = pgTable('profiles', {
   planId: text('plan_id'),         // e.g. pro_monthly_INR
   renewalDate: timestamp('renewal_date'),
   updatedAt: timestamp('updated_at').defaultNow(),
-})
+}, (table) => [
+  pgPolicy('profiles_select_own', {
+    for: 'select',
+    to: authenticatedRole,
+    using: sql`(select auth.user_id() = ${table.id})`,
+  }),
+  pgPolicy('profiles_insert_own', {
+    for: 'insert',
+    to: authenticatedRole,
+    withCheck: sql`(select auth.user_id() = ${table.id})`,
+  }),
+  pgPolicy('profiles_update_own', {
+    for: 'update',
+    to: authenticatedRole,
+    using: sql`(select auth.user_id() = ${table.id})`,
+    withCheck: sql`(select auth.user_id() = ${table.id})`,
+  }),
+]).enableRLS()
 
 export type Conversion = typeof conversions.$inferSelect
 export type NewConversion = typeof conversions.$inferInsert
@@ -49,7 +85,13 @@ export const payments = pgTable('payments', {
   razorpaySubscriptionId: text('razorpay_subscription_id'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-})
+}, (table) => [
+  pgPolicy('payments_select_own', {
+    for: 'select',
+    to: authenticatedRole,
+    using: sql`(select auth.user_id() = ${table.userId})`,
+  }),
+]).enableRLS()
 
 export type Payment = typeof payments.$inferSelect
 

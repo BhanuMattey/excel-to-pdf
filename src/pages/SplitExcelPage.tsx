@@ -148,20 +148,21 @@ const SplitExcelPage = () => {
     setProgress(0)
     setResults([])
 
-    // Create DB records upfront so history is populated
     const conversionRecords: { id: string; fileConfig: typeof files[0] }[] = []
-    if (user) {
-      for (const fileConfig of files) {
-        try {
-          const record = await conversionService.createConversion(user.id, fileConfig.file.name, fileConfig.file.size) as { id: string }
-          conversionRecords.push({ id: record.id, fileConfig })
-        } catch {
-          // non-fatal
-        }
-      }
-    }
 
     try {
+      // Create DB records upfront so history is populated.
+      if (user) {
+        for (const fileConfig of files) {
+          try {
+            const record = await conversionService.createConversion(user.id, fileConfig.file.name, fileConfig.file.size) as { id: string }
+            conversionRecords.push({ id: record.id, fileConfig })
+          } catch (historyErr) {
+            throw new Error(`Failed to save conversion history: ${historyErr instanceof Error ? historyErr.message : 'Unknown database error'}`)
+          }
+        }
+      }
+
       const processedResults: SplitResult[] = []
       const totalFiles = files.length
 
@@ -199,9 +200,8 @@ const SplitExcelPage = () => {
               })
             } catch (r2Err) {
               console.error('[r2/upload] failed for', zipName, r2Err)
-              await conversionService.updateConversionStatus(rec.id, 'completed', {
-                outputUrl: `/api/python/download/${result.jobId}`,
-              }).catch(() => {})
+              await conversionService.updateConversionStatus(rec.id, 'failed').catch(() => {})
+              throw new Error(`Split completed, but failed to store file in R2: ${r2Err instanceof Error ? r2Err.message : 'Unknown storage error'}`)
             }
           } else {
             await conversionService.updateConversionStatus(rec.id, 'completed').catch(() => {})

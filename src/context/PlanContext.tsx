@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useAuth } from './AuthContext'
+import { profileService } from '../services/db'
 
 type Plan = 'free' | 'pro'
 type BillingCycle = 'monthly' | 'yearly'
@@ -36,15 +37,9 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
   const [planProfile, setPlanProfile] = useState<PlanProfile | null>(null)
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
 
-  const fetchPlan = useCallback(async (email: string) => {
+  const fetchPlan = useCallback(async (userId: string, email: string) => {
     try {
-      const res = await fetch(`/api/profile?email=${encodeURIComponent(email)}`, { credentials: 'include' })
-      if (!res.ok) return
-      const data = await res.json() as {
-        profile?: { plan?: string; planId?: string; subscriptionId?: string; subscriptionStatus?: string; renewalDate?: string }
-        hasPaidPayment?: boolean
-        latestPaidPayment?: { plan_id?: string }
-      }
+      const data = await profileService.getBillingProfile(userId, email)
       const p = data.profile
 
       // Pro = either profiles.plan === 'pro' OR there's a paid payment in the payments table
@@ -74,13 +69,13 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   useEffect(() => {
-    if (user?.email) {
-      fetchPlan(user.email)
+    if (user?.id && user?.email) {
+      fetchPlan(user.id, user.email)
     } else {
       setCurrentPlan('free')
       setPlanProfile(null)
     }
-  }, [user?.email, fetchPlan])
+  }, [user?.id, user?.email, fetchPlan])
 
   const upgradePlan = (plan: Plan, profile?: Partial<PlanProfile>) => {
     setCurrentPlan(plan)
@@ -94,7 +89,7 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const refreshPlan = async () => {
-    if (user?.email) await fetchPlan(user.email)
+    if (user?.id && user?.email) await fetchPlan(user.id, user.email)
   }
 
   return (
