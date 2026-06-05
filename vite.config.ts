@@ -203,6 +203,107 @@ function localApiPlugin() {
         }
 
         // ── Conversion CRUD ───────────────────────────────────────────────────
+        if (url.startsWith('/api/conversions')) {
+          res.setHeader('Content-Type', 'application/json')
+          try {
+            const { drizzle } = await import('drizzle-orm/node-postgres')
+            const { Pool } = await import('pg')
+            const { conversions } = await import('./src/db/schema')
+            const { eq, desc } = await import('drizzle-orm')
+            const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+            const db = drizzle(pool)
+            const toSnake = (row: typeof conversions.$inferSelect) => ({
+              id: row.id,
+              user_id: row.userId,
+              file_name: row.fileName,
+              status: row.status,
+              r2_key: row.r2Key,
+              output_url: row.outputUrl,
+              file_size: row.fileSize,
+              expires_at: row.expiresAt?.toISOString() ?? null,
+              created_at: row.createdAt?.toISOString() ?? null,
+              updated_at: row.updatedAt?.toISOString() ?? null,
+            })
+
+            if (req.method === 'POST' && url === '/api/conversions') {
+              const body = JSON.parse(await readBody(req))
+              if (!body.user_id || !body.file_name) {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: 'user_id and file_name are required' }))
+                await pool.end()
+                return
+              }
+              const [row] = await db.insert(conversions).values({
+                id: randomUUID(),
+                userId: body.user_id,
+                fileName: body.file_name,
+                fileSize: body.file_size ?? null,
+                status: body.status ?? 'processing',
+              }).returning()
+              res.end(JSON.stringify(toSnake(row)))
+              await pool.end()
+              return
+            }
+
+            const patchMatch = url.match(/^\/api\/conversions\/([^/?]+)$/)
+            if (req.method === 'PATCH' && patchMatch) {
+              const body = JSON.parse(await readBody(req))
+              const [row] = await db.update(conversions).set({
+                status: body.status,
+                outputUrl: body.output_url ?? null,
+                r2Key: body.r2_key ?? null,
+                expiresAt: body.expires_at ? new Date(body.expires_at) : null,
+                updatedAt: new Date(),
+              }).where(eq(conversions.id, patchMatch[1])).returning()
+              if (!row) {
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Conversion not found' }))
+              } else {
+                res.end(JSON.stringify(toSnake(row)))
+              }
+              await pool.end()
+              return
+            }
+
+            if (req.method === 'GET' && url.startsWith('/api/conversions/count')) {
+              const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
+              if (!userId) {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: 'user_id is required' }))
+                await pool.end()
+                return
+              }
+              const rows = await db.select({ id: conversions.id }).from(conversions).where(eq(conversions.userId, userId))
+              res.end(JSON.stringify({ count: rows.length }))
+              await pool.end()
+              return
+            }
+
+            if (req.method === 'GET') {
+              const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
+              if (!userId) {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: 'user_id is required' }))
+                await pool.end()
+                return
+              }
+              const rows = await db.select().from(conversions).where(eq(conversions.userId, userId)).orderBy(desc(conversions.createdAt))
+              res.end(JSON.stringify(rows.map(toSnake)))
+              await pool.end()
+              return
+            }
+
+            res.statusCode = 405
+            res.end(JSON.stringify({ error: 'Method not allowed' }))
+            await pool.end()
+          } catch (err) {
+            console.error('[conversions]', err)
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: 'Failed to process conversions request' }))
+          }
+          return
+        }
+
         if (url === '/api/payment/create-order' && req.method === 'POST') {
           res.setHeader('Content-Type', 'application/json')
           try {
@@ -432,6 +533,74 @@ function localApiPlugin() {
         }
 
         // ── Profile: get plan/subscription status ────────────────────────────
+        if (url.startsWith('/api/profile') && req.method === 'GET') {
+          res.setHeader('Content-Type', 'application/json')
+          try {
+            const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
+            if (!userId) {
+              res.statusCode = 400
+              res.end(JSON.stringify({ error: 'user_id is required' }))
+              return
+            }
+
+            const { drizzle } = await import('drizzle-orm/node-postgres')
+            const { Pool } = await import('pg')
+            const { profiles, payments } = await import('./src/db/schema')
+            const { eq, desc } = await import('drizzle-orm')
+            const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } })
+            const db = drizzle(pool)
+
+            const [profile] = await db.select().from(profiles).where(eq(profiles.id, userId))
+            const paymentHistory = await db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt))
+            const paidPayments = paymentHistory.filter((payment) => payment.status === 'paid')
+            const latestPaidPayment = paidPayments[0] ?? null
+
+            if (latestPaidPayment && profile && profile.plan !== 'pro') {
+              await db.update(profiles).set({
+                plan: 'pro',
+                planId: latestPaidPayment.planId ?? profile.planId,
+                subscriptionId: latestPaidPayment.razorpaySubscriptionId ?? profile.subscriptionId,
+                subscriptionStatus: profile.subscriptionStatus ?? 'active',
+                updatedAt: new Date(),
+              }).where(eq(profiles.id, userId))
+            }
+
+            const paymentToSnake = (row: typeof payments.$inferSelect) => ({
+              id: row.id,
+              plan_id: row.planId,
+              amount: row.amount,
+              display_amount: row.displayAmount,
+              currency: row.currency,
+              status: row.status,
+              payment_type: row.paymentType,
+              razorpay_payment_id: row.razorpayPaymentId,
+              razorpay_subscription_id: row.razorpaySubscriptionId,
+              created_at: row.createdAt?.toISOString() ?? null,
+              updated_at: row.updatedAt?.toISOString() ?? null,
+            })
+
+            res.end(JSON.stringify({
+              profile: {
+                id: profile?.id ?? userId,
+                plan: profile?.plan === 'pro' ? 'pro' : 'free',
+                planId: profile?.planId ?? null,
+                subscriptionId: profile?.subscriptionId ?? null,
+                subscriptionStatus: profile?.subscriptionStatus ?? null,
+                renewalDate: profile?.renewalDate?.toISOString() ?? null,
+              },
+              hasPaidPayment: paidPayments.length > 0,
+              latestPaidPayment: latestPaidPayment ? paymentToSnake(latestPaidPayment) : null,
+              payments: paymentHistory.map(paymentToSnake),
+            }))
+            await pool.end()
+          } catch (err) {
+            console.error('[profile]', err)
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: 'Failed to fetch profile' }))
+          }
+          return
+        }
+
         if (url === '/api/payment/cancel-subscription' && req.method === 'POST') {
           res.setHeader('Content-Type', 'application/json')
           try {
