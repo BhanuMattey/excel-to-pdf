@@ -8,12 +8,12 @@ const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
 
 const PLAN_AMOUNTS: Record<string, number> = {
-  pro_monthly_INR: 50000,
-  pro_yearly_INR: 360000,
+  pro_monthly_INR: 49900,
+  pro_yearly_INR: 359900,
 }
 const PLAN_DISPLAY_AMOUNTS: Record<string, number> = {
-  pro_monthly_INR: 500,
-  pro_yearly_INR: 3600,
+  pro_monthly_INR: 499,
+  pro_yearly_INR: 3599,
 }
 const PLAN_CURRENCIES: Record<string, string> = {
   pro_monthly_INR: 'INR',

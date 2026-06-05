@@ -30,14 +30,14 @@ const CheckoutPage = () => {
   const planDetails = {
     pro_monthly: {
       name: 'Pro Plan',
-      price: 500,
+      price: 499,
       currency: '\u20b9',
       billingCycle: 'Billed monthly',
       planId: 'pro_monthly_INR',
     },
     pro_yearly: {
       name: 'Pro Plan',
-      price: 3600,
+      price: 3599,
       currency: '\u20b9',
       billingCycle: 'Billed yearly (Save 40%)',
       planId: 'pro_yearly_INR',

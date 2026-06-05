@@ -27,8 +27,8 @@ import { paymentService } from '../services/payment'
 
 const RUPEE = '\u20b9'
 const PRICES = {
-  monthly: 500,
-  yearly: 3600,
+  monthly: 499,
+  yearly: 3599,
 } as const
 
 type BillingCycle = keyof typeof PRICES

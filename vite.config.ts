@@ -36,14 +36,14 @@ function validateRazorpayCredentials() {
 
 // plan_id format: pro_{cycle}_INR. INR amounts are in paise.
 const PLAN_AMOUNTS: Record<string, number> = {
-  pro_monthly_INR: 50000,  // ₹500
-  pro_yearly_INR:  360000, // ₹3,600
+  pro_monthly_INR: 49900,  // ₹499
+  pro_yearly_INR:  359900, // ₹3,599
 }
 
 // Human-readable display amounts (not x100)
 const PLAN_DISPLAY_AMOUNTS: Record<string, number> = {
-  pro_monthly_INR: 500,
-  pro_yearly_INR:  3600,
+  pro_monthly_INR: 499,
+  pro_yearly_INR:  3599,
 }
 
 const PLAN_CURRENCIES: Record<string, string> = {

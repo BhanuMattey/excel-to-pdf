@@ -33,7 +33,7 @@ function PlanSyncBridge() {
 }
 
 function App() {
-  const { showAuthPrompt, closeAuthPrompt } = useAuth()
+  const { showAuthPrompt, usagePromptType, closeAuthPrompt } = useAuth()
 
   return (
     <>
@@ -57,7 +57,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/profile" element={<Navigate to="/dashboard#profile" replace />} />
       </Routes>
-      <AuthPromptModal isOpen={showAuthPrompt} onClose={closeAuthPrompt} />
+      <AuthPromptModal isOpen={showAuthPrompt} onClose={closeAuthPrompt} type={usagePromptType ?? 'auth'} />
       <Analytics />
       <SpeedInsights />
     </>

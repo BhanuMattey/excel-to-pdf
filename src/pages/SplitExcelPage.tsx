@@ -41,7 +41,7 @@ const SplitExcelPage = () => {
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<SplitResult[]>([])
   const { isPro } = usePlan()
-  const { user, checkAndIncrementConversions, hasFreeConversions, refreshConversionCount } = useAuth()
+  const { user, checkAndIncrementConversions, refreshConversionCount } = useAuth()
   const maxFileSize = getExcelMaxSize(isPro)
   const freeLimitActive = !isPro
   const freeLimitLabel = formatFileSize(maxFileSize)
@@ -118,11 +118,6 @@ const SplitExcelPage = () => {
 
     if (freeLimitActive && files.some((fileConfig) => fileConfig.file.size > maxFileSize)) {
       toast.error(`Free users can upload Excel files up to ${freeLimitLabel}.`)
-      return
-    }
-
-    if (!isPro && !hasFreeConversions) {
-      toast.error('You have used your free conversions. Upgrade to continue.')
       return
     }
 
@@ -382,7 +377,7 @@ const SplitExcelPage = () => {
                 <button
                   type="button"
                   onClick={handleProcess}
-                  disabled={files.length === 0 || (!isPro && !hasFreeConversions)}
+                  disabled={files.length === 0}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                 >
                   <Zap className="h-4 w-4" />

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { authClient } from '../lib/auth-client'
 import { conversionService } from '../services/db'
 
+type UsagePromptType = 'auth' | 'pro'
+
 interface AuthContextValue {
   user: { id: string; email: string; name?: string | null } | null
   loading: boolean
@@ -17,6 +19,7 @@ interface AuthContextValue {
   refreshConversionCount: () => Promise<void>
   checkAndIncrementConversions: (count?: number) => boolean
   showAuthPrompt: boolean
+  usagePromptType: UsagePromptType | null
   closeAuthPrompt: () => void
 }
 
@@ -35,6 +38,7 @@ export const useAuth = (): AuthContextValue => {
 //   e.g. did 3 anon → 2 more after login; did 1 anon → 4 more after login.
 const ANON_LIMIT = parseInt(import.meta.env.VITE_FREE_CONVERSION_LIMIT || '3')
 const AUTH_LIMIT = parseInt(import.meta.env.VITE_FREE_CONVERSION_LIMIT_AUTH || '5')
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000
 
 // anonConversions: how many conversions were done before login (incremented per conversion)
 // anonAtLogin: snapshot of anonConversions taken at the moment the user logs in/signs up
@@ -42,6 +46,8 @@ const getAnonCount = () => parseInt(localStorage.getItem('anonConversions') || '
 const setAnonCount = (n: number) => localStorage.setItem('anonConversions', String(n))
 const getAnonAtLogin = () => parseInt(localStorage.getItem('anonAtLogin') || '0', 10)
 const setAnonAtLogin = (n: number) => localStorage.setItem('anonAtLogin', String(n))
+const getSessionStartedAt = () => parseInt(localStorage.getItem('authSessionStartedAt') || '0', 10)
+const setSessionStartedAt = (n: number) => localStorage.setItem('authSessionStartedAt', String(n))
 
 const normalizeAuthError = (message?: string) => {
   if (!message) return 'Authentication failed. Please try again.'
@@ -56,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [conversionCount, setConversionCount] = useState(0)
   const [anonymousConversionCount, setAnonymousConversionCount] = useState(() => getAnonCount())
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false)
+  const [usagePromptType, setUsagePromptType] = useState<UsagePromptType | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -64,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setAnonymousConversionCount(getAnonCount())
       return
     }
-    setShowAuthPrompt(false)
+    setUsagePromptType(null)
     // Don't reset to 0 before the fetch — avoids the flash to zero on navigation
     conversionService.getConversionCount(user.id)
       .then(setConversionCount)
@@ -76,6 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (result.error) throw new Error(normalizeAuthError(result.error.message))
     // Snapshot how many anon conversions were done before signup
     setAnonAtLogin(getAnonCount())
+    setSessionStartedAt(Date.now())
     return result
   }
 
@@ -85,6 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (result.data?.user) {
       // Snapshot how many anon conversions were done before login
       setAnonAtLogin(getAnonCount())
+      setSessionStartedAt(Date.now())
       const count = await conversionService.getConversionCount(result.data.user.id).catch(() => 0)
       setConversionCount(count)
     }
@@ -97,8 +105,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Reset anon state so the next session starts fresh
     localStorage.removeItem('anonConversions')
     localStorage.removeItem('anonAtLogin')
+    localStorage.removeItem('authSessionStartedAt')
     setAnonymousConversionCount(0)
   }
+
+  useEffect(() => {
+    if (loading) return
+    if (!user) {
+      localStorage.removeItem('authSessionStartedAt')
+      return
+    }
+
+    let startedAt = getSessionStartedAt()
+    if (!startedAt) {
+      startedAt = Date.now()
+      setSessionStartedAt(startedAt)
+    }
+
+    const remainingMs = startedAt + SESSION_TTL_MS - Date.now()
+    if (remainingMs <= 0) {
+      signOut().catch(() => {})
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      signOut().catch(() => {})
+    }, remainingMs)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [loading, user?.id])
 
   const refreshConversionCount = async () => {
     if (!user) return
@@ -122,17 +157,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Pro users have unlimited conversions
     if (isPro) return true
     if (user) {
-      return effectiveCount + count <= effectiveLimit
+      if (effectiveCount + count > effectiveLimit) {
+        setTimeout(() => setUsagePromptType('pro'), 300)
+        return false
+      }
+      return true
     }
     const current = getAnonCount()
     if (current + count > ANON_LIMIT) {
-      setTimeout(() => setShowAuthPrompt(true), 800)
+      setTimeout(() => setUsagePromptType('auth'), 800)
       return false
     }
     const next = current + count
     setAnonCount(next)
     setAnonymousConversionCount(next)
-    if (next >= ANON_LIMIT) setTimeout(() => setShowAuthPrompt(true), 800)
+    if (next >= ANON_LIMIT) setTimeout(() => setUsagePromptType('auth'), 800)
     return true
   }
 
@@ -153,8 +192,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signOut,
       refreshConversionCount,
       checkAndIncrementConversions,
-      showAuthPrompt,
-      closeAuthPrompt: () => setShowAuthPrompt(false),
+      showAuthPrompt: usagePromptType !== null,
+      usagePromptType,
+      closeAuthPrompt: () => setUsagePromptType(null),
     }}>
       {children}
     </AuthContext.Provider>
