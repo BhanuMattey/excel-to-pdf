@@ -114,7 +114,7 @@ const sections = [
     icon: Mail,
     title: 'Contact',
     content: [
-      'For questions about these Terms, contact us at support@excelfromspdf.com.',
+      'For questions about these Terms, contact us at support@excelfrompdf.com.',
       'We aim to respond to all legal inquiries within 5 business days.',
     ],
   },

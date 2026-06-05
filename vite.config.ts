@@ -203,6 +203,25 @@ function localApiPlugin() {
         }
 
         // ── Conversion CRUD ───────────────────────────────────────────────────
+        if (url === '/api/contact' && req.method === 'POST') {
+          res.setHeader('Content-Type', 'application/json')
+          try {
+            const { sendContactEmails } = await import('./src/server/contact-email')
+            const result = await sendContactEmails(JSON.parse(await readBody(req)))
+            if (!result.ok) {
+              res.statusCode = result.status
+              res.end(JSON.stringify({ error: result.error }))
+              return
+            }
+            res.end(JSON.stringify({ success: true }))
+          } catch (err) {
+            console.error('[contact]', err)
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: 'Failed to send message' }))
+          }
+          return
+        }
+
         if (url.startsWith('/api/conversions')) {
           res.setHeader('Content-Type', 'application/json')
           try {
@@ -739,6 +758,7 @@ export default defineConfig({
           if (
             url.startsWith('/api/r2') ||
             url.startsWith('/api/payment') ||
+            url.startsWith('/api/contact') ||
             url.startsWith('/api/python')
           ) return url
           return null

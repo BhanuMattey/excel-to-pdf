@@ -85,7 +85,7 @@ const sections = [
       'Delete: request removal of your account and all associated data.',
       'Export: receive your data in a portable format.',
       'Opt out: unsubscribe from marketing communications at any time.',
-      'Contact us at privacy@excelfromspdf.com to exercise any of these rights.',
+      'Contact us at privacy@excelfrompdf.com to exercise any of these rights.',
     ],
   },
   {
@@ -94,7 +94,7 @@ const sections = [
     title: 'Contact Us',
     content: [
       'If you have questions about this Privacy Policy or our data practices, reach out to us.',
-      'Email: support@excelfromspdf.com',
+      'Email: support@excelfrompdf.com',
       'We aim to respond to all privacy requests within 5 business days.',
     ],
   },

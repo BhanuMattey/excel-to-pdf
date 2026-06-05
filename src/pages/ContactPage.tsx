@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 import { Navbar, Footer } from '../components/layout'
 import toast from 'react-hot-toast'
 
+const SUPPORT_EMAIL = 'support@excelfrompdf.com'
+
 const ContactPage = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -22,18 +24,32 @@ const ContactPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    toast.success("Message sent! We'll get back to you soon.")
-    setFormData({ name: '', email: '', subject: '', message: '' })
-    setLoading(false)
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await response.json().catch(() => ({} as { error?: string }))
+
+      if (!response.ok) throw new Error(data.error || 'Failed to send message')
+
+      toast.success('Message sent. We will address your query within 12 hours or at the earliest.')
+      setFormData({ name: '', email: '', subject: '', message: '' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send message')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const contactInfo = [
     {
       icon: Mail,
       title: 'Email support',
-      content: 'support@excelfromspdf.com',
-      description: 'We respond within 24 hours',
+      content: SUPPORT_EMAIL,
+      description: 'We respond within 12 hours or earlier',
     },
   ]
 
@@ -52,8 +68,8 @@ const ContactPage = () => {
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Support</p>
               <h1 className="text-4xl sm:text-5xl font-bold text-gray-950 tracking-tight mb-4">Get in touch</h1>
               <p className="text-base leading-7 text-gray-600 max-w-2xl">
-                Have a question, need technical help, or want to talk about a Team plan? Send us a message and we'll get back
-                to you promptly.
+                Have a question, need technical help, or want to talk about a Team plan? Send us a message and we'll address
+                your query within 12 hours or at the earliest.
               </p>
             </motion.div>
           </div>

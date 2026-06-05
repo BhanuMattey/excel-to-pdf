@@ -95,7 +95,7 @@ function printInvoice(payment: PaymentRecord, userName: string, userEmail: strin
 </head>
 <body>
   <div class="header">
-    <div class="brand">ExcelfromPDF<span>support@excelfrom.pdf</span></div>
+    <div class="brand">ExcelfromPDF<span>support@excelfrompdf.com</span></div>
     <div class="inv-meta">
       <strong>${invoiceNo}</strong>
       Issued: ${date}
