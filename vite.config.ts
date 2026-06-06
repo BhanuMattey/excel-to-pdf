@@ -4,6 +4,7 @@ import multer from 'multer'
 import { randomUUID, createHmac } from 'crypto'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { config as loadDotenv } from 'dotenv'
+import { getSessionUser } from './api/_auth'
 
 // Load .env so server-side vars (R2_*, DATABASE_URL, etc.) are available
 // in the Vite plugin middleware — Vite only auto-exposes VITE_* to the browser.
@@ -225,6 +226,13 @@ function localApiPlugin() {
         if (url.startsWith('/api/conversions')) {
           res.setHeader('Content-Type', 'application/json')
           try {
+            const sessionUser = await getSessionUser(req)
+            if (!sessionUser) {
+              res.statusCode = 401
+              res.end(JSON.stringify({ error: 'Unauthorized' }))
+              return
+            }
+
             const { drizzle } = await import('drizzle-orm/node-postgres')
             const { Pool } = await import('pg')
             const { conversions } = await import('./src/db/schema')
@@ -246,15 +254,15 @@ function localApiPlugin() {
 
             if (req.method === 'POST' && url === '/api/conversions') {
               const body = JSON.parse(await readBody(req))
-              if (!body.user_id || !body.file_name) {
+              if (!body.file_name) {
                 res.statusCode = 400
-                res.end(JSON.stringify({ error: 'user_id and file_name are required' }))
+                res.end(JSON.stringify({ error: 'file_name is required' }))
                 await pool.end()
                 return
               }
               const [row] = await db.insert(conversions).values({
                 id: randomUUID(),
-                userId: body.user_id,
+                userId: sessionUser.id,
                 fileName: body.file_name,
                 fileSize: body.file_size ?? null,
                 status: body.status ?? 'processing',
@@ -267,6 +275,28 @@ function localApiPlugin() {
             const patchMatch = url.match(/^\/api\/conversions\/([^/?]+)$/)
             if (req.method === 'PATCH' && patchMatch) {
               const body = JSON.parse(await readBody(req))
+              if (!body.status) {
+                res.statusCode = 400
+                res.end(JSON.stringify({ error: 'status is required' }))
+                await pool.end()
+                return
+              }
+              const [existing] = await db.select({ userId: conversions.userId })
+                .from(conversions)
+                .where(eq(conversions.id, patchMatch[1]))
+                .limit(1)
+              if (!existing) {
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Conversion not found' }))
+                await pool.end()
+                return
+              }
+              if (existing.userId !== sessionUser.id) {
+                res.statusCode = 403
+                res.end(JSON.stringify({ error: 'Forbidden' }))
+                await pool.end()
+                return
+              }
               const [row] = await db.update(conversions).set({
                 status: body.status,
                 outputUrl: body.output_url ?? null,
@@ -285,13 +315,7 @@ function localApiPlugin() {
             }
 
             if (req.method === 'GET' && url.startsWith('/api/conversions/count')) {
-              const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
-              if (!userId) {
-                res.statusCode = 400
-                res.end(JSON.stringify({ error: 'user_id is required' }))
-                await pool.end()
-                return
-              }
+              const userId = sessionUser.id
               const rows = await db.select({ id: conversions.id }).from(conversions).where(eq(conversions.userId, userId))
               res.end(JSON.stringify({ count: rows.length }))
               await pool.end()
@@ -299,13 +323,7 @@ function localApiPlugin() {
             }
 
             if (req.method === 'GET') {
-              const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
-              if (!userId) {
-                res.statusCode = 400
-                res.end(JSON.stringify({ error: 'user_id is required' }))
-                await pool.end()
-                return
-              }
+              const userId = sessionUser.id
               const rows = await db.select().from(conversions).where(eq(conversions.userId, userId)).orderBy(desc(conversions.createdAt))
               res.end(JSON.stringify(rows.map(toSnake)))
               await pool.end()
@@ -555,12 +573,13 @@ function localApiPlugin() {
         if (url.startsWith('/api/profile') && req.method === 'GET') {
           res.setHeader('Content-Type', 'application/json')
           try {
-            const userId = new URL(url, 'http://localhost').searchParams.get('user_id') ?? ''
-            if (!userId) {
-              res.statusCode = 400
-              res.end(JSON.stringify({ error: 'user_id is required' }))
+            const sessionUser = await getSessionUser(req)
+            if (!sessionUser) {
+              res.statusCode = 401
+              res.end(JSON.stringify({ error: 'Unauthorized' }))
               return
             }
+            const userId = sessionUser.id
 
             const { drizzle } = await import('drizzle-orm/node-postgres')
             const { Pool } = await import('pg')

@@ -71,20 +71,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!loading) localStorage.removeItem('session_token')
       return
     }
-    // Sync token synchronously before any API call
-    if (session?.session?.token) {
-      localStorage.setItem('session_token', session.session.token)
-    }
     setUsagePromptType(null)
+
+    // Refresh the session token from the active session so Bearer auth stays valid after page reload
+    authClient.getSession().then((res) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = res as any
+      const token = r?.data?.session?.token ?? r?.data?.token
+      if (token) localStorage.setItem('session_token', token)
+    }).catch(() => {})
+
     conversionService.getConversionCount(user.id)
       .then(setConversionCount)
       .catch(() => {/* keep existing count on transient error */})
-  }, [loading, user?.id, session?.session?.token])
+  }, [loading, user?.id])
 
   const signUp = async (email: string, password: string, name: string) => {
     const result = await authClient.signUp.email({ email, password, name })
     if (result.error) throw new Error(normalizeAuthError(result.error.message))
-    if (result.data?.session?.token) localStorage.setItem('session_token', result.data.session.token)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const token = (result.data as any)?.session?.token ?? (result.data as any)?.token
+    if (token) localStorage.setItem('session_token', token)
     setAnonAtLogin(getAnonCount())
     setSessionStartedAt(Date.now())
     return result
@@ -93,7 +100,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const result = await authClient.signIn.email({ email, password })
     if (result.error) throw new Error(normalizeAuthError(result.error.message))
-    if (result.data?.session?.token) localStorage.setItem('session_token', result.data.session.token)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const token = (result.data as any)?.session?.token ?? (result.data as any)?.token
+    if (token) localStorage.setItem('session_token', token)
     if (result.data?.user) {
       setAnonAtLogin(getAnonCount())
       setSessionStartedAt(Date.now())
