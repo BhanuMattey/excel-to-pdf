@@ -1,22 +1,23 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import { getPresignedUrl } from '../../src/server/r2.js'
+import { getSessionUser } from '../_auth.js'
 
 type RequestWithQuery = IncomingMessage & {
   method?: string
-  query?: {
-    key?: string | string[]
-  }
+  query?: { key?: string | string[] }
   url?: string
 }
 
-function getKey(req: RequestWithQuery) {
+function getKey(req: RequestWithQuery): string {
   const queryKey = req.query?.key
   if (Array.isArray(queryKey)) return queryKey[0] || ''
   if (queryKey) return queryKey
-
   const url = new URL(req.url || '/', 'http://localhost')
   return url.searchParams.get('key') || ''
 }
+
+// Only allow keys that match our own upload pattern to prevent SSRF-style enumeration.
+const ALLOWED_KEY_RE = /^conversions\/[0-9a-f-]{36}\.[a-z0-9]{1,10}$/i
 
 export default async function handler(req: RequestWithQuery, res: ServerResponse) {
   if (req.method === 'OPTIONS') {
@@ -32,11 +33,28 @@ export default async function handler(req: RequestWithQuery, res: ServerResponse
     return
   }
 
+  // Require an authenticated session.
+  const sessionUser = await getSessionUser(req)
+  if (!sessionUser) {
+    res.statusCode = 401
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'Unauthorized' }))
+    return
+  }
+
   const key = getKey(req)
   if (!key) {
     res.statusCode = 400
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ error: 'key is required' }))
+    return
+  }
+
+  // Reject keys that don't match our upload naming scheme.
+  if (!ALLOWED_KEY_RE.test(key)) {
+    res.statusCode = 400
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'Invalid key format' }))
     return
   }
 

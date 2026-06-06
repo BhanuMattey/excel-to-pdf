@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { desc, eq } from 'drizzle-orm'
 import { conversions } from '../src/db/schema.js'
 import { createDb } from '../src/server/db.js'
+import { getSessionUser } from './_auth.js'
 
 function toSnake(row: typeof conversions.$inferSelect) {
   return {
@@ -24,14 +25,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'POST') {
-      const body = req.body as { user_id?: string; file_name?: string; file_size?: number; status?: string }
+      // Require authentication for creating conversion records.
+      const sessionUser = await getSessionUser(req)
+      if (!sessionUser) return res.status(401).json({ error: 'Unauthorized' })
 
-      if (!body.user_id) return res.status(400).json({ error: 'user_id is required' })
+      const body = req.body as { file_name?: string; file_size?: number; status?: string }
       if (!body.file_name) return res.status(400).json({ error: 'file_name is required' })
 
       const [row] = await d.insert(conversions).values({
         id: randomUUID(),
-        userId: body.user_id,
+        userId: sessionUser.id,
         fileName: body.file_name,
         fileSize: body.file_size ?? null,
         status: body.status ?? 'processing',
@@ -41,17 +44,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'GET') {
-      const userId = typeof req.query.user_id === 'string'
-        ? req.query.user_id
-        : typeof req.query.user === 'string'
-          ? req.query.user
-          : ''
-
-      if (!userId) return res.status(400).json({ error: 'user_id is required' })
+      // Require authentication; use session user ID, ignore query param.
+      const sessionUser = await getSessionUser(req)
+      if (!sessionUser) return res.status(401).json({ error: 'Unauthorized' })
 
       const rows = await d.select()
         .from(conversions)
-        .where(eq(conversions.userId, userId))
+        .where(eq(conversions.userId, sessionUser.id))
         .orderBy(desc(conversions.createdAt))
 
       return res.json(rows.map(toSnake))

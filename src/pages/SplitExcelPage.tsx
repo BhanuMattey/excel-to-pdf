@@ -67,7 +67,7 @@ const SplitExcelPage = () => {
         id: Date.now() + index,
         file,
         sheetIndex: '1',
-        columnIndex: '3',
+        columnIndex: '4',
       }))
 
     if (newFiles.length > 0) {

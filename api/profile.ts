@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { desc, eq } from 'drizzle-orm'
 import { payments, profiles } from '../src/db/schema.js'
 import { createDb } from '../src/server/db.js'
+import { getSessionUser } from './_auth.js'
 
 function paymentToSnake(row: typeof payments.$inferSelect) {
   return {
@@ -33,13 +34,11 @@ function profileToCamel(row: typeof profiles.$inferSelect | null, userId: string
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const userId = typeof req.query.user_id === 'string'
-    ? req.query.user_id
-    : typeof req.query.user === 'string'
-      ? req.query.user
-      : ''
+  // Verify session — userId must come from the authenticated session, not the query string.
+  const sessionUser = await getSessionUser(req)
+  if (!sessionUser) return res.status(401).json({ error: 'Unauthorized' })
 
-  if (!userId) return res.status(400).json({ error: 'user_id is required' })
+  const userId = sessionUser.id
 
   const d = createDb()
   try {

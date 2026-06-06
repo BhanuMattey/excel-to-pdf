@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { randomUUID } from 'crypto'
-import { payments, profiles } from '../../src/db/schema.js'
-import { eq } from 'drizzle-orm'
+import { payments } from '../../src/db/schema.js'
 import { createDb } from '../../src/server/db.js'
+import { getSessionUser } from '../_auth.js'
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || ''
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
@@ -33,7 +33,11 @@ const rzpAuth = () => `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SE
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const body = req.body as { plan_id?: string; user_id?: string; user_email?: string }
+  // Require authentication so orders are always tied to a real user.
+  const sessionUser = await getSessionUser(req)
+  if (!sessionUser) return res.status(401).json({ error: 'Unauthorized' })
+
+  const body = req.body as { plan_id?: string; user_email?: string }
   const planId = body.plan_id ?? ''
   const amount = PLAN_AMOUNTS[planId]
   if (!amount) return res.status(400).json({ detail: `Unknown plan_id: ${planId}` })
@@ -70,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           total_count: 12,
           quantity: 1,
           customer_notify: 1,
-          notify_info: { notify_email: body.user_email ?? '' },
+          notify_info: { notify_email: body.user_email ?? sessionUser.email },
         }),
       })
       if (!subRes.ok) {
@@ -80,8 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const sub = await subRes.json() as { id: string }
       await d.insert(payments).values({
         id: sub.id,
-        userId: body.user_id ?? null,
-        userEmail: body.user_email ?? '',
+        userId: sessionUser.id,
+        userEmail: body.user_email ?? sessionUser.email,
         planId,
         amount,
         displayAmount: PLAN_DISPLAY_AMOUNTS[planId],
@@ -110,8 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const order = await orderRes.json() as { id: string; amount: number; currency: string }
     await d.insert(payments).values({
       id: order.id,
-      userId: body.user_id ?? null,
-      userEmail: body.user_email ?? '',
+      userId: sessionUser.id,
+      userEmail: body.user_email ?? sessionUser.email,
       planId,
       amount: order.amount,
       displayAmount: PLAN_DISPLAY_AMOUNTS[planId],

@@ -15,6 +15,16 @@ type EmailPayload = {
   reply_to?: string
 }
 
+// Only accept known subject keys — prevents arbitrary subject injection.
+const ALLOWED_SUBJECTS = new Set([
+  'general',
+  'support',
+  'billing',
+  'enterprise',
+  'partnership',
+  'other',
+])
+
 const subjectLabels: Record<string, string> = {
   general: 'General Inquiry',
   support: 'Technical Support',
@@ -23,6 +33,9 @@ const subjectLabels: Record<string, string> = {
   partnership: 'Partnership Opportunity',
   other: 'Other',
 }
+
+const MAX_NAME_LEN = 100
+const MAX_MESSAGE_LEN = 5000
 
 function escapeHtml(value: string) {
   return value
@@ -69,8 +82,20 @@ export async function sendContactEmails(payload: ContactPayload) {
     return { ok: false, status: 400, error: 'Enter a valid email address' }
   }
 
+  if (!ALLOWED_SUBJECTS.has(subject)) {
+    return { ok: false, status: 400, error: 'Invalid subject' }
+  }
+
+  if (name.length > MAX_NAME_LEN) {
+    return { ok: false, status: 400, error: `Name must be ${MAX_NAME_LEN} characters or fewer` }
+  }
+
+  if (message.length > MAX_MESSAGE_LEN) {
+    return { ok: false, status: 400, error: `Message must be ${MAX_MESSAGE_LEN} characters or fewer` }
+  }
+
   const from = process.env.RESEND_FROM || `ExcelfromPDF <${SUPPORT_EMAIL}>`
-  const topic = subjectLabels[subject] ?? subject
+  const topic = subjectLabels[subject]
   const safeName = escapeHtml(name)
   const safeEmail = escapeHtml(email)
   const safeTopic = escapeHtml(topic)

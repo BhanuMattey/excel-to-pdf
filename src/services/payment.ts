@@ -22,14 +22,14 @@ interface OrderDetails {
 }
 
 export const paymentService = {
-  async createOrder(planId: string, userEmail: string, userName: string | null = null, userId?: string) {
+  // user_id / user_name are no longer sent — the server resolves the user from the session.
+  async createOrder(planId: string, userEmail: string, _userName: string | null = null, _userId?: string) {
     try {
-      const response = await axios.post(`${PAYMENT_API_BASE_URL}/api/payment/create-order`, {
-        plan_id: planId,
-        user_email: userEmail,
-        user_name: userName,
-        user_id: userId ?? null,
-      })
+      const response = await axios.post(
+        `${PAYMENT_API_BASE_URL}/api/payment/create-order`,
+        { plan_id: planId, user_email: userEmail },
+        { withCredentials: true }
+      )
       return response.data as {
         success: boolean
         type: 'subscription' | 'order'
@@ -42,8 +42,14 @@ export const paymentService = {
   },
 
   async verifyPayment(paymentData: Record<string, unknown>) {
+    // Remove any user_id the caller may have included — the server uses the session.
+    const { user_id: _removed, ...safeData } = paymentData as Record<string, unknown> & { user_id?: unknown }
     try {
-      const response = await axios.post(`${PAYMENT_API_BASE_URL}/api/payment/verify`, paymentData)
+      const response = await axios.post(
+        `${PAYMENT_API_BASE_URL}/api/payment/verify`,
+        safeData,
+        { withCredentials: true }
+      )
       return response.data as { success: boolean; plan: string; renewal_date?: string }
     } catch (error) {
       const e = error as AxiosError<{ detail?: string }>
@@ -51,13 +57,13 @@ export const paymentService = {
     }
   },
 
-  async cancelSubscription(subscriptionId: string, userId: string, userEmail: string) {
+  async cancelSubscription(subscriptionId: string, _userId: string, _userEmail: string) {
     try {
-      const response = await axios.post(`${PAYMENT_API_BASE_URL}/api/payment/cancel-subscription`, {
-        subscription_id: subscriptionId,
-        user_id: userId,
-        user_email: userEmail,
-      })
+      const response = await axios.post(
+        `${PAYMENT_API_BASE_URL}/api/payment/cancel-subscription`,
+        { subscription_id: subscriptionId },
+        { withCredentials: true }
+      )
       return response.data
     } catch (error) {
       const e = error as AxiosError<{ detail?: string }>
@@ -67,7 +73,9 @@ export const paymentService = {
 
   async getPaymentStatus(paymentId: string) {
     try {
-      const response = await axios.get(`${PAYMENT_API_BASE_URL}/api/payment/status/${paymentId}`)
+      const response = await axios.get(`${PAYMENT_API_BASE_URL}/api/payment/status/${paymentId}`, {
+        withCredentials: true,
+      })
       return response.data
     } catch (error) {
       const e = error as AxiosError<{ detail?: string }>
@@ -113,7 +121,6 @@ export const paymentService = {
       },
     }
 
-    // Use subscription_id for recurring, order_id for one-time
     if (orderDetails.subscription_id) {
       options.subscription_id = orderDetails.subscription_id
     } else if (orderDetails.order_id) {

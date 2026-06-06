@@ -2,6 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { eq } from 'drizzle-orm'
 import { conversions } from '../../src/db/schema.js'
 import { createDb } from '../../src/server/db.js'
+import { getSessionUser } from '../_auth.js'
+
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || ''
 
 function toSnake(row: typeof conversions.$inferSelect) {
   return {
@@ -21,6 +24,23 @@ function toSnake(row: typeof conversions.$inferSelect) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
 
+  // Accept either:
+  // 1. A valid user session (the browser client updating its own conversion), or
+  // 2. The internal shared secret (the Python backend updating job status).
+  const internalHeader = req.headers['x-internal-secret']
+  const internalSecret = Array.isArray(internalHeader) ? internalHeader[0] : internalHeader
+
+  let authorizedUserId: string | null = null
+
+  if (INTERNAL_SECRET && internalSecret === INTERNAL_SECRET) {
+    // Internal service call — allow unconditionally, no user scoping needed.
+    authorizedUserId = '__internal__'
+  } else {
+    const sessionUser = await getSessionUser(req)
+    if (!sessionUser) return res.status(401).json({ error: 'Unauthorized' })
+    authorizedUserId = sessionUser.id
+  }
+
   const id = typeof req.query.id === 'string' ? req.query.id : ''
   if (!id) return res.status(400).json({ error: 'id is required' })
 
@@ -35,6 +55,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const d = createDb()
   try {
+    // For browser callers, verify the conversion belongs to the requesting user.
+    if (authorizedUserId !== '__internal__') {
+      const [existing] = await d.select({ userId: conversions.userId })
+        .from(conversions)
+        .where(eq(conversions.id, id))
+        .limit(1)
+
+      if (!existing) return res.status(404).json({ error: 'Conversion not found' })
+      if (existing.userId !== authorizedUserId) return res.status(403).json({ error: 'Forbidden' })
+    }
+
     const [row] = await d.update(conversions).set({
       status: body.status,
       outputUrl: body.output_url ?? null,

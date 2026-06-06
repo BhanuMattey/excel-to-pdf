@@ -1,5 +1,26 @@
-import { pgTable, text, integer, bigint, timestamp, doublePrecision } from 'drizzle-orm/pg-core'
+import { pgTable, text, integer, bigint, timestamp, doublePrecision, boolean } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
+
+export const user = pgTable('user', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  image: text('image'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const session = pgTable('session', {
+  id: text('id').primaryKey(),
+  expiresAt: timestamp('expires_at').notNull(),
+  token: text('token').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+})
 
 export const conversions = pgTable('conversions', {
   id: text('id').primaryKey(),

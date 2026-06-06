@@ -51,12 +51,12 @@ export interface PaymentRecord {
 }
 
 export const conversionService = {
-  createConversion: async (userId: string, fileName: string, fileSize?: number): Promise<ConversionRecord> => {
+  // user_id is no longer sent — the server derives it from the session cookie.
+  createConversion: async (_userId: string, fileName: string, fileSize?: number): Promise<ConversionRecord> => {
     return handleLocal(r2Api.post('/api/conversions', {
-        user_id: userId,
-        file_name: fileName,
-        file_size: fileSize ?? null,
-        status: 'processing',
+      file_name: fileName,
+      file_size: fileSize ?? null,
+      status: 'processing',
     }))
   },
 
@@ -66,19 +66,20 @@ export const conversionService = {
     extra: { outputUrl?: string | null; r2Key?: string | null; expiresAt?: string | null } = {}
   ): Promise<ConversionRecord> => {
     return handleLocal(r2Api.patch(`/api/conversions/${encodeURIComponent(id)}`, {
-        status,
-        output_url: extra.outputUrl ?? null,
-        r2_key: extra.r2Key ?? null,
-        expires_at: extra.expiresAt ?? null,
+      status,
+      output_url: extra.outputUrl ?? null,
+      r2_key: extra.r2Key ?? null,
+      expires_at: extra.expiresAt ?? null,
     }))
   },
 
-  getUserConversions: async (userId: string): Promise<ConversionRecord[]> => {
-    return handleLocal(r2Api.get(`/api/conversions?user_id=${encodeURIComponent(userId)}`))
+  // user_id query param removed — server uses session.
+  getUserConversions: async (_userId: string): Promise<ConversionRecord[]> => {
+    return handleLocal(r2Api.get('/api/conversions'))
   },
 
-  getConversionCount: async (userId: string): Promise<number> => {
-    const data = await handleLocal<{ count: number }>(r2Api.get(`/api/conversions/count?user_id=${encodeURIComponent(userId)}`))
+  getConversionCount: async (_userId: string): Promise<number> => {
+    const data = await handleLocal<{ count: number }>(r2Api.get('/api/conversions/count'))
     return data.count
   },
 }
@@ -95,13 +96,14 @@ export const r2Service = {
 }
 
 export const profileService = {
-  getBillingProfile: async (userId: string, _email: string): Promise<{
+  // user_id query param removed — server uses session.
+  getBillingProfile: async (_userId: string, _email: string): Promise<{
     profile: BillingProfile | null
     payments: PaymentRecord[]
     hasPaidPayment: boolean
     latestPaidPayment: PaymentRecord | null
   }> => {
-    return handleLocal(r2Api.get(`/api/profile?user_id=${encodeURIComponent(userId)}`))
+    return handleLocal(r2Api.get('/api/profile'))
   },
 
   getPayments: async (userId: string, email: string): Promise<PaymentRecord[]> => {
@@ -118,7 +120,7 @@ export const profileService = {
     }
   },
 
-  updateProfile: async (userId: string, updates: Record<string, unknown>) => {
-    return handleLocal(r2Api.patch(`/api/profile?user_id=${encodeURIComponent(userId)}`, updates))
+  updateProfile: async (_userId: string, updates: Record<string, unknown>) => {
+    return handleLocal(r2Api.patch('/api/profile', updates))
   },
 }
