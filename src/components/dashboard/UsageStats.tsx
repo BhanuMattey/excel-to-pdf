@@ -12,7 +12,28 @@ function planLabel(planId: string | null | undefined) {
 
 const UsageStats = () => {
   const { user, conversionCount, remainingFreeConversions, FREE_CONVERSION_LIMIT, isPro } = useAuth()
-  const { planProfile } = usePlan()
+  const { planProfile, planLoading } = usePlan()
+
+  if (planLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="card animate-pulse">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl mr-4" />
+                <div className="space-y-2">
+                  <div className="h-6 w-10 bg-gray-100 rounded" />
+                  <div className="h-3 w-24 bg-gray-100 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="card animate-pulse h-24" />
+      </div>
+    )
+  }
 
   if (isPro) {
     const renewalDate = planProfile?.renewalDate

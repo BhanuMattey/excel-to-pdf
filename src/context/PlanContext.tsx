@@ -20,6 +20,7 @@ interface PlanContextValue {
   setBillingCycle: (cycle: BillingCycle) => void
   upgradePlan: (plan: Plan, profile?: Partial<PlanProfile>) => void
   isPro: boolean
+  planLoading: boolean
   refreshPlan: () => Promise<void>
 }
 
@@ -36,8 +37,10 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentPlan, setCurrentPlan] = useState<Plan>('free')
   const [planProfile, setPlanProfile] = useState<PlanProfile | null>(null)
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
+  const [planLoading, setPlanLoading] = useState(false)
 
   const fetchPlan = useCallback(async (userId: string, email: string) => {
+    setPlanLoading(true)
     try {
       const data = await profileService.getBillingProfile(userId, email)
       const p = data.profile
@@ -65,6 +68,8 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
       else if (resolvedPlanId?.includes('monthly')) setBillingCycle('monthly')
     } catch {
       // non-fatal — keep free
+    } finally {
+      setPlanLoading(false)
     }
   }, [])
 
@@ -100,6 +105,7 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
       setBillingCycle,
       upgradePlan,
       isPro: currentPlan === 'pro',
+      planLoading,
       refreshPlan,
     }}>
       {children}

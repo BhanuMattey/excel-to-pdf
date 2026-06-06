@@ -2,6 +2,16 @@ import axios, { AxiosError } from 'axios'
 
 const PAYMENT_API_BASE_URL = import.meta.env.VITE_PAYMENT_API_BASE_URL ?? ''
 
+const paymentApi = axios.create({ withCredentials: true })
+paymentApi.interceptors.request.use((config) => {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('session_token') : null
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
 declare global {
   interface Window {
     Razorpay: new (options: Record<string, unknown>) => { open(): void }
@@ -25,10 +35,9 @@ export const paymentService = {
   // user_id / user_name are no longer sent — the server resolves the user from the session.
   async createOrder(planId: string, userEmail: string, _userName: string | null = null, _userId?: string) {
     try {
-      const response = await axios.post(
+      const response = await paymentApi.post(
         `${PAYMENT_API_BASE_URL}/api/payment/create-order`,
-        { plan_id: planId, user_email: userEmail },
-        { withCredentials: true }
+        { plan_id: planId, user_email: userEmail }
       )
       return response.data as {
         success: boolean
@@ -45,10 +54,9 @@ export const paymentService = {
     // Remove any user_id the caller may have included — the server uses the session.
     const { user_id: _removed, ...safeData } = paymentData as Record<string, unknown> & { user_id?: unknown }
     try {
-      const response = await axios.post(
+      const response = await paymentApi.post(
         `${PAYMENT_API_BASE_URL}/api/payment/verify`,
-        safeData,
-        { withCredentials: true }
+        safeData
       )
       return response.data as { success: boolean; plan: string; renewal_date?: string }
     } catch (error) {
@@ -59,10 +67,9 @@ export const paymentService = {
 
   async cancelSubscription(subscriptionId: string, _userId: string, _userEmail: string) {
     try {
-      const response = await axios.post(
+      const response = await paymentApi.post(
         `${PAYMENT_API_BASE_URL}/api/payment/cancel-subscription`,
-        { subscription_id: subscriptionId },
-        { withCredentials: true }
+        { subscription_id: subscriptionId }
       )
       return response.data
     } catch (error) {
@@ -73,9 +80,7 @@ export const paymentService = {
 
   async getPaymentStatus(paymentId: string) {
     try {
-      const response = await axios.get(`${PAYMENT_API_BASE_URL}/api/payment/status/${paymentId}`, {
-        withCredentials: true,
-      })
+      const response = await paymentApi.get(`${PAYMENT_API_BASE_URL}/api/payment/status/${paymentId}`)
       return response.data
     } catch (error) {
       const e = error as AxiosError<{ detail?: string }>
