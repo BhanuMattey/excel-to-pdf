@@ -4,20 +4,20 @@ const NEON_AUTH_BASE = 'https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathParam = req.query.path
-  const pathStr = Array.isArray(pathParam) ? pathParam.join('/') : (pathParam ?? '')
+  const pathSegments = Array.isArray(pathParam) ? pathParam : pathParam ? [pathParam] : []
+  const pathStr = pathSegments.join('/')
 
-  const search = new URL(req.url ?? '/', `https://${req.headers.host}`).search
-  const target = `${NEON_AUTH_BASE}/${pathStr}${search}`
+  const reqUrl = new URL(req.url ?? '/', `https://${req.headers.host}`)
+  const target = `${NEON_AUTH_BASE}/${pathStr}${reqUrl.search}`
 
   const forwardHeaders: Record<string, string> = {}
   for (const [key, val] of Object.entries(req.headers)) {
     if (!val) continue
-    // Skip hop-by-hop and host (we're targeting a different host)
     if (['host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade'].includes(key)) continue
     forwardHeaders[key] = Array.isArray(val) ? val.join(', ') : val
   }
 
-  let body: BodyInit | undefined
+  let body: Buffer | undefined
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks: Buffer[] = []
     await new Promise<void>((resolve, reject) => {
@@ -25,25 +25,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req.on('end', resolve)
       req.on('error', reject)
     })
-    body = Buffer.concat(chunks)
-    if ((body as Buffer).length === 0) body = undefined
+    const buf = Buffer.concat(chunks)
+    if (buf.length > 0) body = buf
   }
 
   const upstream = await fetch(target, {
     method: req.method,
     headers: forwardHeaders,
     body,
-    // @ts-expect-error Node 18 fetch supports this
-    duplex: 'half',
   })
 
-  // Forward status
   res.status(upstream.status)
 
-  // Forward all response headers including Set-Cookie
   upstream.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'transfer-encoding') return
-    if (key.toLowerCase() === 'connection') return
+    const lower = key.toLowerCase()
+    if (lower === 'transfer-encoding' || lower === 'connection') return
     res.setHeader(key, value)
   })
 
