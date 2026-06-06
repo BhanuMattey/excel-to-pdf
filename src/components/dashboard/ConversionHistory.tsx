@@ -4,6 +4,7 @@ import { FileText, Download, CheckCircle, XCircle, Clock, Loader2, Timer } from 
 import { conversionService, r2Service, ConversionRecord } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, truncateFilename, formatFileSize } from '../../utils/helpers'
+import { withExcelAdvertisingSuffix } from '../../utils/excelFormatting'
 import toast from 'react-hot-toast'
 
 // Returns { expired, label } for a given expiresAt ISO string
@@ -49,7 +50,7 @@ const ConversionHistory = () => {
         : { url: conv.output_url! }
       const a = document.createElement('a')
       a.href = url
-      a.download = conv.file_name.replace(/\.pdf$/i, '.xlsx')
+      a.download = getHistoryDownloadName(conv)
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -58,6 +59,18 @@ const ConversionHistory = () => {
     } finally {
       setDownloadingId(null)
     }
+  }
+
+  const getHistoryDownloadName = (conv: ConversionRecord) => {
+    if (conv.r2_key?.toLowerCase().endsWith('.zip')) {
+      return conv.file_name.replace(/\.(xlsx|xls)$/i, '_split.zip')
+    }
+
+    if (conv.file_name.toLowerCase().endsWith('.pdf')) {
+      return withExcelAdvertisingSuffix(conv.file_name.replace(/\.pdf$/i, '.xlsx'))
+    }
+
+    return conv.file_name
   }
 
   const getStatusIcon = (status: string) => {

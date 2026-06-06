@@ -9,7 +9,7 @@ import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
-import { formatExcelWorkbook } from '../../utils/excelFormatting'
+import { formatExcelWorkbook, withExcelAdvertisingSuffix } from '../../utils/excelFormatting'
 
 interface ConversionPageProps {
   title: string
@@ -165,7 +165,7 @@ const ConversionPage = ({
         for (let i = 0; i < conversionRecords.length; i++) {
           const record = conversionRecords[i]
           const blob = processedBlobs[i]
-          const outputName = getOutputName(files[i]?.name || `file_${i + 1}`)
+          const outputName = getDownloadName(getOutputName(files[i]?.name || `file_${i + 1}`))
           try {
             const { key, url, expiresAt } = await r2Service.uploadFile(blob.blob, outputName)
             await conversionService.updateConversionStatus(record.id, 'completed', {
@@ -198,7 +198,7 @@ const ConversionPage = ({
 
   const handleDownload = async () => {
     for (let index = 0; index < results.length; index++) {
-      const outputName = getOutputName(files[index]?.name || `file_${index + 1}`)
+      const outputName = getDownloadName(getOutputName(files[index]?.name || `file_${index + 1}`))
       downloadBlob(results[index].blob, outputName)
     }
     toast.success('Download started.')
@@ -354,6 +354,11 @@ const ConversionPage = ({
       <Footer />
     </div>
   )
+}
+
+function getDownloadName(fileName: string) {
+  if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) return fileName
+  return withExcelAdvertisingSuffix(fileName)
 }
 
 export default ConversionPage

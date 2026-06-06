@@ -97,8 +97,13 @@ export const pdfService = {
   async splitExcel(file: File, sheetIndex = 1, columnIndex = 3, onProgress: ProgressFn = () => {}) {
     const formData = new FormData()
     formData.append('files', file)
-    formData.append('sheet_index', String(sheetIndex - 1))
+    formData.append('sheet_index', String(sheetIndex))
+    formData.append('sheet_number', String(sheetIndex))
+    formData.append('sheet_index_zero_based', String(sheetIndex - 1))
     formData.append('target_column_index', String(columnIndex - 1))
+    formData.append('column_index', String(columnIndex))
+    formData.append('target_column_number', String(columnIndex))
+    formData.append('target_column_index_zero_based', String(columnIndex - 1))
 
     const { data: uploadData } = await apiClient.post<UploadResponse>('/splitexcel', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

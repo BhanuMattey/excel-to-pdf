@@ -2,29 +2,34 @@ import * as XLSX from 'xlsx-js-style'
 import JSZip from 'jszip'
 
 const WORKBOOK_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const ADVERTISING_SUFFIX = '-excelfrompdf.com'
 
 const cellBorder = {
-  top: { style: 'thin', color: { rgb: 'D9E2EC' } },
-  right: { style: 'thin', color: { rgb: 'D9E2EC' } },
-  bottom: { style: 'thin', color: { rgb: 'D9E2EC' } },
-  left: { style: 'thin', color: { rgb: 'D9E2EC' } },
+  top: { style: 'thin', color: { rgb: '000000' } },
+  right: { style: 'thin', color: { rgb: '000000' } },
+  bottom: { style: 'thin', color: { rgb: '000000' } },
+  left: { style: 'thin', color: { rgb: '000000' } },
 }
 
-const baseAlignment = {
-  wrapText: true,
-  vertical: 'top',
-}
+const baseFont = { name: 'Arial', sz: 9, color: { rgb: '000000' } }
 
-const bodyStyle = {
+const dataCellStyle = {
   border: cellBorder,
-  alignment: baseAlignment,
+  alignment: { horizontal: 'center', wrapText: true, vertical: 'center' },
+  font: baseFont,
 }
 
-const headerStyle = {
+const headerCellStyle = {
   border: cellBorder,
-  alignment: baseAlignment,
-  font: { bold: true, color: { rgb: '111827' } },
-  fill: { fgColor: { rgb: 'F3F4F6' } },
+  alignment: { horizontal: 'center', wrapText: true, vertical: 'center' },
+  font: { name: 'Arial', sz: 9, bold: true, color: { rgb: '000000' } },
+  fill: { fgColor: { rgb: 'D9E1F2' }, patternType: 'solid' },
+}
+
+const titleCellStyle = {
+  border: cellBorder,
+  alignment: { horizontal: 'center', wrapText: true, vertical: 'center' },
+  font: { name: 'Arial', sz: 10, bold: true, color: { rgb: '000000' } },
 }
 
 function getTextWidth(value: unknown) {
@@ -33,37 +38,63 @@ function getTextWidth(value: unknown) {
   return Math.max(...lines.map((line) => line.length), 8)
 }
 
+function detectHeaderRows(sheet: XLSX.WorkSheet, range: XLSX.Range): Set<number> {
+  const headerRows = new Set<number>()
+
+  for (let row = range.s.r; row <= Math.min(range.s.r + 10, range.e.r); row++) {
+    let hasText = false
+    let hasNumbers = false
+    let allCaps = true
+
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })]
+      if (!cell || cell.v == null) continue
+      const val = String(cell.v).trim()
+      if (!val) continue
+      hasText = true
+      if (typeof cell.v === 'number' && col > 0) hasNumbers = true
+      if (val !== val.toUpperCase()) allCaps = false
+    }
+
+    if (hasText && !hasNumbers && allCaps) {
+      headerRows.add(row)
+    }
+  }
+
+  return headerRows
+}
+
 function styleWorksheet(sheet: XLSX.WorkSheet) {
   if (!sheet['!ref']) return
 
   const range = XLSX.utils.decode_range(sheet['!ref'])
   const widths = new Map<number, number>()
-  const rowHeights = new Map<number, number>()
+  const headerRows = detectHeaderRows(sheet, range)
+
+  // The first data header row is typically the last consecutive header row block
+  const maxHeaderRow = headerRows.size > 0 ? Math.max(...headerRows) : range.s.r
 
   for (let row = range.s.r; row <= range.e.r; row++) {
+    const isHeader = headerRows.has(row)
+    const isTitle = row < maxHeaderRow && isHeader
+
     for (let col = range.s.c; col <= range.e.c; col++) {
       const address = XLSX.utils.encode_cell({ r: row, c: col })
       const cell = sheet[address]
       if (!cell) continue
 
       const existingStyle = typeof cell.s === 'object' && cell.s ? cell.s : {}
-      cell.s = {
-        ...existingStyle,
-        ...(row === range.s.r ? headerStyle : bodyStyle),
-        alignment: {
-          ...(existingStyle as { alignment?: object }).alignment,
-          wrapText: true,
-          vertical: 'top',
-        },
+      const numFmt = 'numFmt' in existingStyle ? { numFmt: existingStyle.numFmt } : {}
+
+      if (isTitle) {
+        cell.s = { ...numFmt, ...titleCellStyle }
+      } else if (isHeader) {
+        cell.s = { ...numFmt, ...headerCellStyle }
+      } else {
+        cell.s = { ...numFmt, ...dataCellStyle }
       }
 
       widths.set(col, Math.max(widths.get(col) ?? 0, getTextWidth(cell.v)))
-
-      const text = cell.v == null ? '' : String(cell.v)
-      const estimatedLines = Math.max(text.split(/\r?\n/).length, Math.ceil(text.length / 34))
-      if (estimatedLines > 1) {
-        rowHeights.set(row, Math.max(rowHeights.get(row) ?? 18, Math.min(estimatedLines * 16, 72)))
-      }
     }
   }
 
@@ -71,7 +102,7 @@ function styleWorksheet(sheet: XLSX.WorkSheet) {
   sheet['!cols'] = Array.from({ length: range.e.c - range.s.c + 1 }, (_, index) => {
     const col = range.s.c + index
     const existing = existingCols[col] ?? {}
-    const wch = Math.min(Math.max(widths.get(col) ?? existing.wch ?? 12, 10), 42)
+    const wch = Math.min(Math.max(existing.wch ?? widths.get(col) ?? 10, 10), 40)
     return { ...existing, wch }
   })
 
@@ -79,8 +110,15 @@ function styleWorksheet(sheet: XLSX.WorkSheet) {
   sheet['!rows'] = Array.from({ length: range.e.r - range.s.r + 1 }, (_, index) => {
     const row = range.s.r + index
     const existing = existingRows[row] ?? {}
-    const hpt = rowHeights.get(row)
-    return hpt ? { ...existing, hpt } : existing
+    let hpt: number
+    if (headerRows.has(row) && row === maxHeaderRow) {
+      hpt = existing.hpt ?? 52
+    } else if (headerRows.has(row)) {
+      hpt = existing.hpt ?? 30
+    } else {
+      hpt = existing.hpt ?? 20
+    }
+    return { ...existing, hpt }
   })
 }
 
@@ -122,4 +160,15 @@ export async function formatExcelFilesInZip(blob: Blob): Promise<Blob> {
   )
 
   return outZip.generateAsync({ type: 'blob' })
+}
+
+export function withExcelAdvertisingSuffix(fileName: string): string {
+  const extensionMatch = fileName.match(/\.(xlsx|xls)$/i)
+  if (!extensionMatch) return fileName
+
+  const extension = extensionMatch[0]
+  const baseName = fileName.slice(0, -extension.length)
+  if (baseName.toLowerCase().endsWith(ADVERTISING_SUFFIX)) return fileName
+
+  return `${baseName}${ADVERTISING_SUFFIX}${extension}`
 }
