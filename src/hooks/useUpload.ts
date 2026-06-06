@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePlan } from '../context/PlanContext'
 import { formatFileSize } from '../utils/helpers'
 import { getPdfMaxSize } from '../utils/uploadLimits'
-import { addWatermarkToExcel } from '../utils/watermark'
+import { formatExcelWorkbook } from '../utils/excelFormatting'
 import toast from 'react-hot-toast'
 
 interface ConversionResult {
@@ -95,14 +95,20 @@ export const useUpload = () => {
       setUploadState('processing')
 
       const blobs = await pdfService.convertPdfToExcel(files, setProgress)
-      setOutputBlobs(blobs)
+      const formattedBlobs = await Promise.all(
+        blobs.map(async (result) => ({
+          ...result,
+          blob: await formatExcelWorkbook(result.blob),
+        }))
+      )
+      setOutputBlobs(formattedBlobs)
       setUploadState('success')
 
       // Upload converted files to R2 and update DB records
       if (user && conversionRecords.length) {
         for (let i = 0; i < conversionRecords.length; i++) {
           const record = conversionRecords[i]
-          const blob = blobs[i]
+          const blob = formattedBlobs[i]
           const originalFile = files[i]
           const outputName = originalFile.name.replace(/\.pdf$/i, '.xlsx')
 
@@ -145,11 +151,10 @@ export const useUpload = () => {
     for (let i = 0; i < outputBlobs.length; i++) {
       const item = outputBlobs[i]
       const fileName = currentFiles[i]?.name.replace('.pdf', '.xlsx') || `file_${i + 1}.xlsx`
-      const finalBlob = isPro ? item.blob : await addWatermarkToExcel(item.blob)
-      downloadBlob(finalBlob, fileName)
+      downloadBlob(item.blob, fileName)
     }
     toast.success('Downloads started!')
-  }, [outputBlobs, currentFiles, isPro])
+  }, [outputBlobs, currentFiles])
 
   const reset = useCallback(() => {
     setUploadState('idle')

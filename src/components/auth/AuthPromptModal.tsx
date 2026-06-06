@@ -58,7 +58,7 @@ const AuthPromptModal = ({
 
             <p className="mb-6 text-gray-600">
               {isProPrompt ? (
-                <>Upgrade to Pro to keep converting without limits, remove watermarks, and process larger files.</>
+                <>Upgrade to Pro to keep converting without limits and process larger files.</>
               ) : (
                 <>You've used your 3 free conversions. Sign up or log in to unlock <strong>2 more free conversions</strong> (5 total) - no payment needed!</>
               )}
@@ -84,8 +84,8 @@ const AuthPromptModal = ({
                   <Shield className="h-3 w-3 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{isProPrompt ? 'No Watermarks' : 'Secure & Private'}</p>
-                  <p className="text-xs text-gray-500">{isProPrompt ? 'Download cleaner exports ready for work' : 'Files are not stored for more than 24 hours'}</p>
+                  <p className="text-sm font-medium text-gray-900">{isProPrompt ? 'Clean Exports' : 'Secure & Private'}</p>
+                  <p className="text-xs text-gray-500">{isProPrompt ? 'Download formatted exports ready for work' : 'Files are not stored for more than 24 hours'}</p>
                 </div>
               </div>
 

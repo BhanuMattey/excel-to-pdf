@@ -9,7 +9,7 @@ import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
-import { addWatermarkToExcel, addWatermarkToPdf } from '../../utils/watermark'
+import { formatExcelWorkbook } from '../../utils/excelFormatting'
 
 interface ConversionPageProps {
   title: string
@@ -149,12 +149,22 @@ const ConversionPage = ({
       }
 
       const blobs = await serviceCall(files, setProgress)
-      setResults(blobs)
+      const processedBlobs = await Promise.all(
+        blobs.map(async (result, index) => {
+          const outputName = getOutputName(files[index]?.name || `file_${index + 1}`)
+          if (!outputName.endsWith('.xlsx') && !outputName.endsWith('.xls')) return result
+          return {
+            ...result,
+            blob: await formatExcelWorkbook(result.blob),
+          }
+        })
+      )
+      setResults(processedBlobs)
 
       if (user && conversionRecords.length) {
         for (let i = 0; i < conversionRecords.length; i++) {
           const record = conversionRecords[i]
-          const blob = blobs[i]
+          const blob = processedBlobs[i]
           const outputName = getOutputName(files[i]?.name || `file_${i + 1}`)
           try {
             const { key, url, expiresAt } = await r2Service.uploadFile(blob.blob, outputName)
@@ -172,7 +182,7 @@ const ConversionPage = ({
         await refreshConversionCount()
       }
 
-      toast.success(`${blobs.length} file${blobs.length > 1 ? 's' : ''} converted.`)
+      toast.success(`${processedBlobs.length} file${processedBlobs.length > 1 ? 's' : ''} converted.`)
     } catch (err) {
       if (user && conversionRecords.length) {
         for (const record of conversionRecords) {
@@ -189,17 +199,7 @@ const ConversionPage = ({
   const handleDownload = async () => {
     for (let index = 0; index < results.length; index++) {
       const outputName = getOutputName(files[index]?.name || `file_${index + 1}`)
-      let blob = results[index].blob
-
-      if (!isPro) {
-        if (outputName.endsWith('.xlsx') || outputName.endsWith('.xls')) {
-          blob = await addWatermarkToExcel(blob)
-        } else if (outputName.endsWith('.pdf')) {
-          blob = await addWatermarkToPdf(blob)
-        }
-      }
-
-      downloadBlob(blob, outputName)
+      downloadBlob(results[index].blob, outputName)
     }
     toast.success('Download started.')
   }

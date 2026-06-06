@@ -20,7 +20,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePlan } from '../context/PlanContext'
 import { formatFileSize } from '../utils/helpers'
 import { getExcelMaxSize } from '../utils/uploadLimits'
-import { addWatermarkToZip } from '../utils/watermark'
+import { formatExcelFilesInZip } from '../utils/excelFormatting'
 
 interface FileConfig {
   id: number
@@ -174,7 +174,13 @@ const SplitExcelPage = () => {
           }
         )
 
-        if (result) processedResults.push({ fileName: fileConfig.file.name, jobId: result.jobId, blob: result.blob })
+        if (result) {
+          processedResults.push({
+            fileName: fileConfig.file.name,
+            jobId: result.jobId,
+            blob: await formatExcelFilesInZip(result.blob),
+          })
+        }
       }
 
       setProgress(100)
@@ -220,8 +226,7 @@ const SplitExcelPage = () => {
   }
 
   const handleDownload = async (blob: Blob, fileName: string) => {
-    const finalBlob = isPro ? blob : await addWatermarkToZip(blob)
-    downloadBlob(finalBlob, fileName.replace(/\.(xlsx|xls)$/i, '_split.zip'))
+    downloadBlob(blob, fileName.replace(/\.(xlsx|xls)$/i, '_split.zip'))
   }
 
   const handleDownloadAll = () => {

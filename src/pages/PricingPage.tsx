@@ -43,7 +43,7 @@ function formatPrice(amount: number) {
 
 const planMetrics = [
   { value: '24h', label: 'file retention window' },
-  { value: '0', label: 'watermarks on Pro exports' },
+  { value: 'Clean', label: 'formatted exports' },
   { value: 'INR', label: 'simple local billing' },
 ]
 
@@ -51,7 +51,7 @@ const freeFeatures = [
   { text: '5 starter conversions', active: true },
   { text: 'Standard table extraction', active: true },
   { text: 'Basic OCR support', active: true },
-  { text: 'Watermarked exports', active: true },
+  { text: 'Clean formatted exports', active: true },
   { text: 'Unlimited conversions', active: false },
   { text: 'Priority support', active: false },
 ]
@@ -61,7 +61,7 @@ const proFeatures = [
   'Advanced OCR for scanned documents',
   'Unlimited file size',
   'Preserved tables, headers, and merged cells',
-  'No watermark on exported files',
+  'Clean formatted exported files',
   'Conversion history and invoice access',
   'Priority email support',
 ]
@@ -70,7 +70,7 @@ const capabilityRows = [
   { feature: 'PDF to Excel conversion', free: '5 conversions', pro: 'Unlimited' },
   { feature: 'Scanned PDF OCR', free: 'Basic', pro: 'Advanced' },
   { feature: 'File size limit', free: 'Free limit', pro: 'Unlimited' },
-  { feature: 'Watermark', free: 'Included', pro: 'Removed' },
+  { feature: 'Excel formatting', free: 'Borders and wrap text', pro: 'Borders and wrap text' },
   { feature: 'Conversion history', free: 'Limited', pro: 'Full history' },
   { feature: 'Support', free: 'Community', pro: 'Priority email' },
 ]
@@ -100,7 +100,7 @@ const faqs = [
   },
   {
     question: 'What changes when I upgrade?',
-    answer: 'Pro unlocks unlimited conversions, larger files, advanced OCR, watermark-free exports, conversion history, and priority support.',
+    answer: 'Pro unlocks unlimited conversions, larger files, advanced OCR, conversion history, and priority support.',
   },
   {
     question: 'Can I switch billing cycles?',
@@ -361,7 +361,7 @@ const PricingPage = () => {
                     {[
                       { value: 'OCR', label: 'Advanced' },
                       { value: '∞', label: 'Conversions' },
-                      { value: '0', label: 'Watermark' },
+                      { value: 'Clean', label: 'Exports' },
                     ].map((item) => (
                       <div key={item.label} className="rounded-2xl bg-white/8 px-3 py-3">
                         <div className="text-lg font-extrabold">{item.value}</div>
