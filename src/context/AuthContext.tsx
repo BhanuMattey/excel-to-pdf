@@ -60,16 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session, isPending: loading } = authClient.useSession()
   const user = session?.user ?? null
 
-  // Keep localStorage token in sync with the active session
-  useEffect(() => {
-    if (!loading && session?.session?.token) {
-      localStorage.setItem('session_token', session.session.token)
-    }
-    if (!loading && !session) {
-      localStorage.removeItem('session_token')
-    }
-  }, [loading, session?.session?.token])
-
   const [conversionCount, setConversionCount] = useState(0)
   const [anonymousConversionCount, setAnonymousConversionCount] = useState(() => getAnonCount())
   const [usagePromptType, setUsagePromptType] = useState<UsagePromptType | null>(null)
@@ -78,14 +68,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) {
       setConversionCount(0)
       setAnonymousConversionCount(getAnonCount())
+      if (!loading) localStorage.removeItem('session_token')
       return
     }
+    // Sync token synchronously before any API call
+    if (session?.session?.token) {
+      localStorage.setItem('session_token', session.session.token)
+    }
     setUsagePromptType(null)
-    // Don't reset to 0 before the fetch — avoids the flash to zero on navigation
     conversionService.getConversionCount(user.id)
       .then(setConversionCount)
       .catch(() => {/* keep existing count on transient error */})
-  }, [user?.id])
+  }, [loading, user?.id, session?.session?.token])
 
   const signUp = async (email: string, password: string, name: string) => {
     const result = await authClient.signUp.email({ email, password, name })
