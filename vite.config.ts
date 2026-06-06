@@ -747,19 +747,24 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // /api/r2 is handled by localApiPlugin above (same port).
-      // Everything else under /api goes to the Python backend.
+      '/api/neon-auth': {
+        target: 'https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1.aws.neon.tech',
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/api/neon-auth', '/neondb/auth'),
+      },
       '/api': {
         target: 'http://153.75.250.227:8000',
         changeOrigin: true,
         bypass(req) {
           const url = req.url || ''
-          // Let the local plugin handle these — don't proxy them to Python backend
           if (
             url.startsWith('/api/r2') ||
             url.startsWith('/api/payment') ||
             url.startsWith('/api/contact') ||
-            url.startsWith('/api/python')
+            url.startsWith('/api/conversions') ||
+            url.startsWith('/api/profile') ||
+            url.startsWith('/api/python') ||
+            url.startsWith('/api/neon-auth')
           ) return url
           return null
         },

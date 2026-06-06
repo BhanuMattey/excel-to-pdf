@@ -5,6 +5,16 @@ const r2ApiBase = LOCAL_API_URL || (typeof window !== 'undefined' ? window.locat
 
 const r2Api = axios.create({ baseURL: r2ApiBase, timeout: 30000, withCredentials: true })
 
+// Attach session token as Bearer so auth works even when cookies are blocked (e.g. Brave)
+r2Api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('session_token')
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
 const handleLocal = <T>(promise: Promise<{ data: T }>): Promise<T> =>
   promise.then((r) => r.data).catch((e: AxiosError<{ error?: unknown; detail?: unknown; message?: string }>) => {
     const errField = e.response?.data?.error

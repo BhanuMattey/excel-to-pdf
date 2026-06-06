@@ -11,11 +11,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const target = `${NEON_AUTH_BASE}/${pathStr}${reqUrl.search}`
 
   const forwardHeaders: Record<string, string> = {}
+  const skipHeaders = new Set([
+    'host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade',
+    // Strip these — Neon checks Origin/Referer and rejects cross-origin proxied calls
+    'origin', 'referer',
+  ])
+
   for (const [key, val] of Object.entries(req.headers)) {
-    if (!val) continue
-    if (['host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade'].includes(key)) continue
+    if (!val || skipHeaders.has(key.toLowerCase())) continue
     forwardHeaders[key] = Array.isArray(val) ? val.join(', ') : val
   }
+
+  // Set origin to the Neon auth domain so it looks like a same-origin server call
+  forwardHeaders['origin'] = 'https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1.aws.neon.tech'
 
   let body: Buffer | undefined
   if (req.method !== 'GET' && req.method !== 'HEAD') {

@@ -60,6 +60,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session, isPending: loading } = authClient.useSession()
   const user = session?.user ?? null
 
+  // Keep localStorage token in sync with the active session
+  useEffect(() => {
+    if (!loading && session?.session?.token) {
+      localStorage.setItem('session_token', session.session.token)
+    }
+    if (!loading && !session) {
+      localStorage.removeItem('session_token')
+    }
+  }, [loading, session?.session?.token])
+
   const [conversionCount, setConversionCount] = useState(0)
   const [anonymousConversionCount, setAnonymousConversionCount] = useState(() => getAnonCount())
   const [usagePromptType, setUsagePromptType] = useState<UsagePromptType | null>(null)
@@ -80,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, name: string) => {
     const result = await authClient.signUp.email({ email, password, name })
     if (result.error) throw new Error(normalizeAuthError(result.error.message))
-    // Snapshot how many anon conversions were done before signup
+    if (result.data?.session?.token) localStorage.setItem('session_token', result.data.session.token)
     setAnonAtLogin(getAnonCount())
     setSessionStartedAt(Date.now())
     return result
@@ -89,8 +99,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const result = await authClient.signIn.email({ email, password })
     if (result.error) throw new Error(normalizeAuthError(result.error.message))
+    if (result.data?.session?.token) localStorage.setItem('session_token', result.data.session.token)
     if (result.data?.user) {
-      // Snapshot how many anon conversions were done before login
       setAnonAtLogin(getAnonCount())
       setSessionStartedAt(Date.now())
       const count = await conversionService.getConversionCount(result.data.user.id).catch(() => 0)
@@ -101,8 +111,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await authClient.signOut()
+    localStorage.removeItem('session_token')
     setConversionCount(0)
-    // Reset anon state so the next session starts fresh
     localStorage.removeItem('anonConversions')
     localStorage.removeItem('anonAtLogin')
     localStorage.removeItem('authSessionStartedAt')
