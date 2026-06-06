@@ -1,33 +1,24 @@
 import type { IncomingMessage } from 'http'
 import type { VercelRequest } from '@vercel/node'
-import { eq } from 'drizzle-orm'
-import { createDb } from '../src/server/db.js'
-import { session as sessionTable, user as userTable } from '../src/db/schema.js'
 
-// Cookie name set by Better Auth / Neon Auth by default.
 const SESSION_COOKIE = 'better-auth.session_token'
+const NEON_AUTH_BASE = 'https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1.aws.neon.tech/neondb/auth'
 
 function extractToken(req: IncomingMessage | VercelRequest): string | null {
-  const cookieHeader = (req.headers as Record<string, string | string[] | undefined>).cookie
-  if (cookieHeader) {
-    const raw = Array.isArray(cookieHeader) ? cookieHeader.join(';') : cookieHeader
-    for (const part of raw.split(';')) {
-      const eqIdx = part.indexOf('=')
-      if (eqIdx === -1) continue
-      const name = part.slice(0, eqIdx).trim()
-      if (name === SESSION_COOKIE) {
-        return decodeURIComponent(part.slice(eqIdx + 1).trim())
-      }
-    }
-  }
-
-  // Fallback: Authorization: Bearer <token>
   const auth = (req.headers as Record<string, string | string[] | undefined>).authorization
   if (auth) {
     const val = Array.isArray(auth) ? auth[0] : auth
     if (val?.toLowerCase().startsWith('bearer ')) return val.slice(7).trim()
   }
+  return null
+}
 
+function getForwardedCookie(req: IncomingMessage | VercelRequest): string | null {
+  const cookieHeader = (req.headers as Record<string, string | string[] | undefined>).cookie
+  if (!cookieHeader) return null
+  const raw = Array.isArray(cookieHeader) ? cookieHeader.join(';') : cookieHeader
+  // Check if the cookie header contains the session cookie (signed value)
+  if (raw.includes(SESSION_COOKIE)) return raw
   return null
 }
 
@@ -37,29 +28,55 @@ export interface SessionUser {
 }
 
 /**
- * Verifies the session token from the incoming request against the database.
- * Returns the authenticated user or null if the token is absent / expired / invalid.
+ * Validates the session by calling Neon Auth's /get-session endpoint server-side.
+ * Two strategies:
+ *  1. Cookie present: forward the full signed cookie header to Neon Auth (works when cookie is set)
+ *  2. Bearer token only (Brave cookie blocked): construct a cookie from the raw token and try
  */
 export async function getSessionUser(
   req: IncomingMessage | VercelRequest
 ): Promise<SessionUser | null> {
-  const token = extractToken(req)
-  if (!token) return null
+  // Strategy 1: forward the actual signed cookie from the browser
+  const forwardedCookie = getForwardedCookie(req)
+  if (forwardedCookie) {
+    const user = await callNeonGetSession(forwardedCookie)
+    if (user) return user
+  }
 
+  // Strategy 2: Bearer token fallback — construct cookie from raw token
+  const bearerToken = extractToken(req)
+  if (bearerToken) {
+    // Try passing the raw token as cookie (works if Neon Auth doesn't verify signature strictly)
+    const user = await callNeonGetSession(`${SESSION_COOKIE}=${encodeURIComponent(bearerToken)}`)
+    if (user) return user
+  }
+
+  return null
+}
+
+async function callNeonGetSession(cookieHeader: string): Promise<SessionUser | null> {
   try {
-    const db = createDb()
-    const rows = await db
-      .select({ userId: sessionTable.userId, expiresAt: sessionTable.expiresAt, email: userTable.email })
-      .from(sessionTable)
-      .innerJoin(userTable, eq(sessionTable.userId, userTable.id))
-      .where(eq(sessionTable.token, token))
-      .limit(1)
+    const resp = await fetch(`${NEON_AUTH_BASE}/get-session`, {
+      method: 'GET',
+      headers: {
+        'cookie': cookieHeader,
+        'origin': NEON_AUTH_BASE,
+        'content-type': 'application/json',
+      },
+    })
 
-    const row = rows[0]
-    if (!row) return null
-    if (row.expiresAt < new Date()) return null
+    if (!resp.ok) return null
 
-    return { id: row.userId, email: row.email }
+    const data = await resp.json() as {
+      user?: { id?: string; email?: string }
+    } | null
+
+    if (!data) return null
+    const id = data?.user?.id
+    const email = data?.user?.email
+    if (!id || !email) return null
+
+    return { id, email }
   } catch {
     return null
   }
