@@ -46,6 +46,10 @@
       "destination": "https://api.excelfrompdf.com/api/:path*"
     },
     {
+      "source": "/neon-auth/:path*",
+      "destination": "https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1.aws.neon.tech/neondb/auth/:path*"
+    },
+    {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
