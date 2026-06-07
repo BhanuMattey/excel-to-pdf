@@ -9,11 +9,16 @@ export const config = {
 const PYTHON_API = 'https://api.excelfrompdf.com/api'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pathParam = req.query.path
-  const segments = Array.isArray(pathParam) ? pathParam : pathParam ? [pathParam] : []
-  const pathStr = segments.join('/')
-
+  // req.url is the full incoming path, e.g. /api/python/splitexcel or /api/python/status/abc
+  // Strip the /api/python prefix to get the downstream path.
   const reqUrl = new URL(req.url ?? '/', `https://${req.headers.host}`)
+  const stripped = reqUrl.pathname.replace(/^\/api\/python\/?/, '')
+
+  // Fallback: if Vercel passed path as a query param instead of path segments, use that.
+  const pathParam = req.query.path
+  const fromQuery = Array.isArray(pathParam) ? pathParam.join('/') : pathParam ?? ''
+  const pathStr = stripped || fromQuery
+
   const target = `${PYTHON_API}/${pathStr}${reqUrl.search}`
 
   const skipHeaders = new Set([
