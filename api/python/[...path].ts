@@ -19,7 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fromQuery = Array.isArray(pathParam) ? pathParam.join('/') : pathParam ?? ''
   const pathStr = stripped || fromQuery
 
-  const target = `${PYTHON_API}/${pathStr}${reqUrl.search}`
+  // Strip internal Vercel routing params (...path) before forwarding.
+  const forwardParams = new URLSearchParams(reqUrl.search)
+  forwardParams.delete('path')
+  const search = forwardParams.toString() ? `?${forwardParams.toString()}` : ''
+  const target = `${PYTHON_API}/${pathStr}${search}`
 
   const skipHeaders = new Set([
     'host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade',
