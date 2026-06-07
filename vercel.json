@@ -42,10 +42,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/python/:path*",
-      "destination": "https://api.excelfrompdf.com/api/:path*"
-    },
-    {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
