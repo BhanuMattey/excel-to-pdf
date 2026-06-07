@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const target = `${PYTHON_API}/${pathStr}${search}`
 
   const skipHeaders = new Set([
-    'host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade',
+    'host', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade', 'accept-encoding',
   ])
 
   const forwardHeaders: Record<string, string> = {}
@@ -58,7 +58,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   upstream.headers.forEach((value, key) => {
     const lower = key.toLowerCase()
-    if (lower === 'transfer-encoding' || lower === 'connection') return
+    // Drop hop-by-hop headers and content-encoding — fetch() decompresses the
+    // body automatically, so forwarding the encoding header would tell the
+    // browser to decompress already-decoded bytes (ERR_CONTENT_DECODING_FAILED).
+    if (lower === 'transfer-encoding' || lower === 'connection' || lower === 'content-encoding') return
     res.setHeader(key, value)
   })
 
