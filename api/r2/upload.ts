@@ -17,10 +17,13 @@ const ALLOWED_TYPES: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'application/msword': 'doc',
+  'application/zip': 'zip',
+  'application/x-zip-compressed': 'zip',
+  'application/octet-stream': 'zip',
 }
 
 // Allowed file extensions (double-checked against the original name).
-const ALLOWED_EXTS = new Set(['pdf', 'xls', 'xlsx', 'doc', 'docx'])
+const ALLOWED_EXTS = new Set(['pdf', 'xls', 'xlsx', 'doc', 'docx', 'zip'])
 
 // 50 MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024
