@@ -48,13 +48,11 @@ const SplitExcelPage = () => {
 
   const validTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
   ]
 
   const isValidExcelFile = (selectedFile: File) =>
     validTypes.includes(selectedFile.type) ||
-    selectedFile.name.endsWith('.xlsx') ||
-    selectedFile.name.endsWith('.xls')
+    selectedFile.name.toLowerCase().endsWith('.xlsx')
 
   const onDrop = (acceptedFiles: File[]) => {
     const newFiles = acceptedFiles
@@ -93,7 +91,6 @@ const SplitExcelPage = () => {
     onDropRejected,
     accept: {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
     },
     multiple: true,
     maxSize: maxFileSize,
@@ -118,6 +115,12 @@ const SplitExcelPage = () => {
 
     if (freeLimitActive && files.some((fileConfig) => fileConfig.file.size > maxFileSize)) {
       toast.error(`Free users can upload Excel files up to ${freeLimitLabel}.`)
+      return
+    }
+
+    const xlsFiles = files.filter((fc) => fc.file.name.toLowerCase().endsWith('.xls') && !fc.file.name.toLowerCase().endsWith('.xlsx'))
+    if (xlsFiles.length > 0) {
+      toast.error('Split only supports .xlsx files. Please convert your .xls file to .xlsx first (open in Excel → Save As → .xlsx).')
       return
     }
 
@@ -298,7 +301,7 @@ const SplitExcelPage = () => {
                 {files.length ? `${files.length} Excel file${files.length > 1 ? 's' : ''} selected` : 'Drop Excel files here'}
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                .xlsx and .xls supported. Free uploads up to {freeLimitLabel} per file.
+                .xlsx supported. Free uploads up to {freeLimitLabel} per file.
               </p>
               <button type="button" onClick={open} className="mt-6 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
                 Browse Excel files
