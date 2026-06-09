@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePlan } from '../context/PlanContext'
 import { formatFileSize } from '../utils/helpers'
 import { getPdfMaxSize } from '../utils/uploadLimits'
-import { withExcelAdvertisingSuffix } from '../utils/excelFormatting'
+import { withExcelAdvertisingSuffix } from '../utils/fileNames'
 import toast from 'react-hot-toast'
 
 interface ConversionResult {

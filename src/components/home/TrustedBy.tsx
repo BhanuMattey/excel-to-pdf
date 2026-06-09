@@ -1,5 +1,4 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { ShieldCheck, Clock, FileSpreadsheet, Unlock } from 'lucide-react'
 
 const trustPoints = [
@@ -33,11 +32,7 @@ const TrustedBy = () => {
   return (
     <section className="py-20 bg-gray-50 border-t border-gray-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
+        <div
           className="text-center mb-12"
         >
           <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
@@ -46,18 +41,14 @@ const TrustedBy = () => {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-950 tracking-tight">
             Built for documents that matter.
           </h2>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {trustPoints.map((point, i) => {
+          {trustPoints.map((point) => {
             const Icon = point.icon
             return (
-              <motion.div
+              <div
                 key={point.title}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
                 className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm" style={point.iconStyle}>
@@ -67,7 +58,7 @@ const TrustedBy = () => {
                   <p className="text-sm font-semibold text-gray-950 mb-1">{point.title}</p>
                   <p className="text-sm leading-6 text-gray-500">{point.description}</p>
                 </div>
-              </motion.div>
+              </div>
             )
           })}
         </div>

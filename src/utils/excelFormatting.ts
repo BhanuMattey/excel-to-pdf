@@ -1,8 +1,8 @@
 import * as XLSX from 'xlsx-js-style'
 import JSZip from 'jszip'
+export { withExcelAdvertisingSuffix } from './fileNames'
 
 const WORKBOOK_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-const ADVERTISING_SUFFIX = '-excelfrompdf.com'
 
 const cellBorder = {
   top: { style: 'thin', color: { rgb: '000000' } },
@@ -160,15 +160,4 @@ export async function formatExcelFilesInZip(blob: Blob): Promise<Blob> {
   )
 
   return outZip.generateAsync({ type: 'blob' })
-}
-
-export function withExcelAdvertisingSuffix(fileName: string): string {
-  const extensionMatch = fileName.match(/\.(xlsx|xls)$/i)
-  if (!extensionMatch) return fileName
-
-  const extension = extensionMatch[0]
-  const baseName = fileName.slice(0, -extension.length)
-  if (baseName.toLowerCase().endsWith(ADVERTISING_SUFFIX)) return fileName
-
-  return `${baseName}${ADVERTISING_SUFFIX}${extension}`
 }

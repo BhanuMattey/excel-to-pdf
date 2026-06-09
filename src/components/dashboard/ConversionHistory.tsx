@@ -4,7 +4,7 @@ import { FileText, Download, CheckCircle, XCircle, Clock, Loader2, Timer } from 
 import { conversionService, r2Service, ConversionRecord } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, truncateFilename, formatFileSize } from '../../utils/helpers'
-import { withExcelAdvertisingSuffix } from '../../utils/excelFormatting'
+import { withExcelAdvertisingSuffix } from '../../utils/fileNames'
 import toast from 'react-hot-toast'
 
 // Returns { expired, label } for a given expiresAt ISO string

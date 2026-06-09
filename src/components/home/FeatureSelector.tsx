@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef } from 'react'
@@ -18,10 +17,7 @@ const FeatureSelector = () => {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45 }}
+    <div
       className="mt-8"
     >
       <div className="text-center mb-6">
@@ -52,11 +48,8 @@ const FeatureSelector = () => {
               const tone = toolToneClasses[tool.tone]
 
               return (
-                <motion.div
+                <div
                   key={tool.id}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: index * 0.06 }}
                   className="flex-shrink-0 w-64"
                 >
                   <Link
@@ -69,13 +62,13 @@ const FeatureSelector = () => {
                     <h4 className="text-sm font-semibold text-gray-900 mb-1">{tool.title}</h4>
                     <p className="text-xs text-gray-500">{tool.description}</p>
                   </Link>
-                </motion.div>
+                </div>
               )
             })}
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 

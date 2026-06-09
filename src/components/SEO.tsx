@@ -23,7 +23,7 @@ export default function SEO({
   schema,
   noindex = false,
 }: SEOProps) {
-  const fullTitle = title.includes(SITE_NAME) ? title : `${title} — ${SITE_NAME}`
+  const fullTitle = title.includes(SITE_NAME) ? title : `${title} - ${SITE_NAME}`
   const canonicalUrl = canonical ? `${SITE_URL}${canonical}` : undefined
 
   return (

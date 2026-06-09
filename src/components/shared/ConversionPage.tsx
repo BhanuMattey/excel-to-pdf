@@ -10,7 +10,7 @@ import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
-import { formatExcelWorkbook, withExcelAdvertisingSuffix } from '../../utils/excelFormatting'
+import { withExcelAdvertisingSuffix } from '../../utils/fileNames'
 
 interface ConversionPageProps {
   title: string
@@ -154,6 +154,7 @@ const ConversionPage = ({
         blobs.map(async (result, index) => {
           const outputName = getOutputName(files[index]?.name || `file_${index + 1}`)
           if (!outputName.endsWith('.xlsx') && !outputName.endsWith('.xls')) return result
+          const { formatExcelWorkbook } = await import('../../utils/excelFormatting')
           return {
             ...result,
             blob: await formatExcelWorkbook(result.blob),

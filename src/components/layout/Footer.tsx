@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <Link to="/" className="flex items-center gap-2">
             <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-10 w-auto" width="64" height="64" />
-            <span className="text-sm text-gray-400">Â© {new Date().getFullYear()}</span>
+            <span className="text-sm text-gray-400">&copy; {new Date().getFullYear()}</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link to="/pricing" className="text-sm text-gray-400 hover:text-gray-700 transition-colors">Pricing</Link>
