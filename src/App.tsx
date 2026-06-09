@@ -1,25 +1,25 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
-import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
-import DashboardPage from './pages/DashboardPage'
-import PricingPage from './pages/PricingPage'
-import CheckoutPage from './pages/CheckoutPage'
-import PrivacyPage from './pages/PrivacyPage'
-import TermsPage from './pages/TermsPage'
-import ContactPage from './pages/ContactPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import AutoCorrectPage from './pages/AutoCorrectPage'
-import AutoDeskewPage from './pages/AutoDeskewPage'
-import SplitExcelPage from './pages/SplitExcelPage'
-import ExcelToPdfPage from './pages/ExcelToPdfPage'
-import PdfToWordPage from './pages/PdfToWordPage'
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SignupPage = lazy(() => import('./pages/SignupPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const ContactPage = lazy(() => import('./pages/ContactPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const AutoCorrectPage = lazy(() => import('./pages/AutoCorrectPage'))
+const AutoDeskewPage = lazy(() => import('./pages/AutoDeskewPage'))
+const SplitExcelPage = lazy(() => import('./pages/SplitExcelPage'))
+const ExcelToPdfPage = lazy(() => import('./pages/ExcelToPdfPage'))
+const PdfToWordPage = lazy(() => import('./pages/PdfToWordPage'))
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import { AuthPromptModal } from './components/auth'
+const AuthPromptModal = lazy(() => import('./components/auth/AuthPromptModal'))
 import { useAuth } from './context/AuthContext'
 import { usePlan } from './context/PlanContext'
 
@@ -38,25 +38,31 @@ function App() {
   return (
     <>
       <PlanSyncBridge />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/auto-correct" element={<AutoCorrectPage />} />
-        <Route path="/auto-deskew" element={<AutoDeskewPage />} />
-        <Route path="/excel-to-pdf" element={<ExcelToPdfPage />} />
-        <Route path="/pdf-to-word" element={<PdfToWordPage />} />
-        <Route path="/split-excel" element={<SplitExcelPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/profile" element={<Navigate to="/dashboard#profile" replace />} />
-      </Routes>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/auto-correct" element={<AutoCorrectPage />} />
+          <Route path="/auto-deskew" element={<AutoDeskewPage />} />
+          <Route path="/excel-to-pdf" element={<ExcelToPdfPage />} />
+          <Route path="/pdf-to-word" element={<PdfToWordPage />} />
+          <Route path="/split-excel" element={<SplitExcelPage />} />
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<Navigate to="/dashboard#profile" replace />} />
+        </Routes>
+      </Suspense>
       <AuthPromptModal isOpen={showAuthPrompt} onClose={closeAuthPrompt} type={usagePromptType ?? 'auth'} />
       <Analytics />
       <SpeedInsights />

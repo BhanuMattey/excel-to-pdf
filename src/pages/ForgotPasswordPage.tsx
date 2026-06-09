@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
@@ -50,7 +50,7 @@ const ForgotPasswordPage = () => {
           >
             <div className="mb-8">
               <Link to="/" className="inline-flex items-center gap-2 mb-8">
-                <img src="/logo.png" alt="ExcelfromPDF" className="h-14 w-auto" />
+                <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-14 w-auto" width="64" height="64" />
               </Link>
 
               {sent ? (

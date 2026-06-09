@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react'
@@ -69,7 +69,7 @@ const SignupForm = () => {
     >
       <div className="mb-8">
         <Link to="/" className="inline-flex items-center gap-2 mb-8">
-          <img src="/logo.png" alt="ExcelfromPDF" className="h-14 w-auto" />
+          <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-14 w-auto" width="64" height="64" />
         </Link>
         <h2 className="text-2xl font-semibold text-gray-950 mb-1">Create your account</h2>
         <p className="text-sm text-gray-500">Save conversion history and get started for free.</p>

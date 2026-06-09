@@ -761,8 +761,52 @@ function localApiPlugin() {
   }
 }
 
+// Converts Vite's injected <link rel="stylesheet"> to async non-render-blocking load.
+// Inline critical CSS ensures the page has minimal styling before the full CSS loads.
+function deferCssPlugin() {
+  return {
+    name: 'defer-css',
+    transformIndexHtml(html: string) {
+      // Convert injected stylesheet links to preload + async swap
+      return html.replace(
+        /<link rel="stylesheet" crossorigin href="([^"]+\.css)">/g,
+        (_, href) =>
+          `<link rel="preload" as="style" href="${href}" onload="this.onload=null;this.rel='stylesheet'">` +
+          `<noscript><link rel="stylesheet" href="${href}"></noscript>`
+      )
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), localApiPlugin()],
+  plugins: [react(), localApiPlugin(), deferCssPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/') || id.includes('node_modules/react-router/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('node_modules/framer-motion/')) {
+            return 'vendor-motion'
+          }
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'vendor-lucide'
+          }
+          if (id.includes('node_modules/@supabase/') || id.includes('node_modules/@neon') || id.includes('node_modules/neon')) {
+            return 'vendor-auth'
+          }
+          if (id.includes('node_modules/axios/') || id.includes('node_modules/zod/')) {
+            return 'vendor-utils'
+          }
+          if (id.includes('node_modules/react-helmet-async/')) {
+            return 'vendor-helmet'
+          }
+          // xlsx and pdf-lib stay with the pages that use them — no forced eager chunk
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     proxy: {

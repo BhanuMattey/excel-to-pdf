@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone'
 import { CheckCircle2, Download, FileCheck2, Loader2, UploadCloud, X, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Navbar, Footer } from '../layout'
+import SEO from '../SEO'
 import { downloadBlob } from '../../services/api'
 import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
@@ -206,6 +207,18 @@ const ConversionPage = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <SEO
+        title={`${title} Online Free — ExcelFromPDF`}
+        description={description}
+        schema={{
+          '@type': 'SoftwareApplication',
+          name: title,
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Any',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+          description,
+        }}
+      />
       <Navbar />
       <main className="flex-grow pt-20 pb-16">
         <section className="relative overflow-hidden border-b border-gray-100" style={theme.panelStyle}>

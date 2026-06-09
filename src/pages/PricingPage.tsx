@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import SEO from '../components/SEO'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowRight,
@@ -252,8 +253,23 @@ const PricingPage = () => {
     }
   }
 
+  const faqSchema = {
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    })),
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f7faf8]">
+      <SEO
+        title="Pricing — ExcelFromPDF PDF to Excel Converter"
+        description="Start free with 5 conversions. Upgrade to Pro for unlimited PDF to Excel conversions, priority processing, and more."
+        canonical="/pricing"
+        schema={faqSchema}
+      />
       <Navbar />
 
       <main className="flex-grow">

@@ -69,4 +69,10 @@
     50% { transform: translateY(-8px); }
   }
   .animate-float { animation: float 6s ease-in-out infinite; }
+
+  @keyframes navbar-slide {
+    from { transform: translateY(-20px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+  }
+  .navbar-slide-in { animation: navbar-slide 0.4s ease forwards; }
 }

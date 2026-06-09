@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, UserCog, Ban, CreditCard, Copyright, Lock, AlertTriangle, RefreshCw, Mail, CheckCircle } from 'lucide-react'
 import { Navbar, Footer } from '../components/layout'
+import SEO from '../components/SEO'
 
 const sections = [
   {
@@ -141,6 +142,11 @@ const TermsPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <SEO
+        title="Terms of Service — ExcelFromPDF"
+        description="Terms and conditions for using ExcelFromPDF's PDF to Excel conversion service."
+        canonical="/terms"
+      />
       <Navbar />
 
       <main className="flex-grow pt-24 pb-20">

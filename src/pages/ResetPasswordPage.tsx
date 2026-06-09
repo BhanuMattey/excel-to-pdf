@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
@@ -75,7 +75,7 @@ const ResetPasswordPage = () => {
           >
             <div className="mb-8">
               <Link to="/" className="inline-flex items-center gap-2 mb-8">
-                <img src="/logo.png" alt="ExcelfromPDF" className="h-14 w-auto" />
+                <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-14 w-auto" width="64" height="64" />
               </Link>
 
               {done ? (
@@ -84,7 +84,7 @@ const ResetPasswordPage = () => {
                     <CheckCircle className="w-7 h-7 text-green-600" />
                   </div>
                   <h2 className="text-2xl font-semibold text-gray-950 mb-2">Password reset!</h2>
-                  <p className="text-sm text-gray-500">Your password has been updated. Redirecting you to sign in…</p>
+                  <p className="text-sm text-gray-500">Your password has been updated. Redirecting you to sign inâ€¦</p>
                 </>
               ) : !token ? (
                 <>

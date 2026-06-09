@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CreditCard, Smartphone, Wallet, Lock, Check, Shield, Loader2 } from 'lucide-react'
@@ -150,7 +150,7 @@ const CheckoutPage = () => {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center">
-            <img src="/logo.png" alt="ExcelfromPDF" className="h-12 w-auto" />
+            <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-12 w-auto" width="64" height="64" />
           </Link>
           <div className="flex items-center text-green-600 text-sm font-medium">
             <Lock className="w-4 h-4 mr-1" />
@@ -235,7 +235,7 @@ const CheckoutPage = () => {
                   </>
                 ) : (
                   <>
-                    Proceed to Pay {currentPlan.currency}{currentPlan.price} →
+                    Proceed to Pay {currentPlan.currency}{currentPlan.price} â†’
                   </>
                 )}
               </button>
@@ -313,7 +313,7 @@ const CheckoutPage = () => {
       <footer className="border-t border-gray-200 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} ExcelfromPDF. All rights reserved.
+            Â© {new Date().getFullYear()} ExcelfromPDF. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <Link to="/terms" className="text-sm text-gray-500 hover:text-gray-700">

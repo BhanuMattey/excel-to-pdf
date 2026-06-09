@@ -4,6 +4,7 @@ import { Mail, Send, Loader2, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Navbar, Footer } from '../components/layout'
 import toast from 'react-hot-toast'
+import SEO from '../components/SEO'
 
 const SUPPORT_EMAIL = 'support@excelfrompdf.com'
 
@@ -58,6 +59,11 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <SEO
+        title="Contact Us — ExcelFromPDF"
+        description="Get help with PDF to Excel conversion. Reach the ExcelFromPDF support team for questions, feedback, or technical issues."
+        canonical="/contact"
+      />
       <Navbar />
 
       <main className="flex-grow pt-24 pb-20">

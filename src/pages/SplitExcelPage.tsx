@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Navbar, Footer } from '../components/layout'
+import SEO from '../components/SEO'
 import {
   CheckCircle2,
   Download,
@@ -238,6 +239,19 @@ const SplitExcelPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <SEO
+        title="Split Excel File Online Free — ExcelFromPDF"
+        description="Split large Excel files by sheet or row count. Download individual sheets as separate .xlsx files. Free, no signup needed."
+        canonical="/split-excel"
+        schema={{
+          '@type': 'SoftwareApplication',
+          name: 'Split Excel File',
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Any',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+          description: 'Split large Excel files by sheet or row count.',
+        }}
+      />
       <Navbar />
       <main className="flex-grow pt-20 pb-16">
         <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-lime-50 border-b border-gray-100">

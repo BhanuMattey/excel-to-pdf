@@ -75,10 +75,16 @@ export default {
     },
   },
   safelist: [
-    {
-      pattern: /^(bg|text|border|from|via|to|ring)-(brand-(green|teal|amber)|primary)-(50|100|200|300|400|500|600|700|800|900)$/,
-      variants: ['hover', 'focus'],
-    },
+    'bg-brand-green-50', 'bg-brand-green-100', 'bg-brand-green-700', 'bg-brand-green-800',
+    'bg-brand-teal-50', 'bg-brand-teal-100', 'bg-brand-teal-700', 'bg-brand-teal-800',
+    'bg-brand-amber-100',
+    'text-brand-green-600', 'text-brand-green-700', 'text-brand-green-800',
+    'text-brand-teal-700', 'text-brand-amber-600',
+    'border-brand-green-100', 'border-brand-green-300', 'border-brand-green-700',
+    'border-brand-teal-100', 'border-brand-teal-300',
+    'bg-primary-50', 'bg-primary-100', 'bg-primary-500', 'bg-primary-600', 'bg-primary-700',
+    'text-primary-600', 'text-primary-700',
+    'hover:bg-brand-green-800', 'hover:bg-brand-teal-800',
   ],
   plugins: [],
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ShieldCheck, Eye, Trash2, Database, Cookie, Link2, UserCheck, Mail } from 'lucide-react'
 import { Navbar, Footer } from '../components/layout'
+import SEO from '../components/SEO'
 
 const sections = [
   {
@@ -121,6 +122,11 @@ const PrivacyPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <SEO
+        title="Privacy Policy — ExcelFromPDF"
+        description="How ExcelFromPDF handles your uploaded files and personal data. Files are permanently deleted within 24 hours."
+        canonical="/privacy"
+      />
       <Navbar />
 
       <main className="flex-grow pt-24 pb-20">

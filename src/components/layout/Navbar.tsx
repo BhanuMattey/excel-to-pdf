@@ -1,5 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+﻿import { Link, useNavigate } from 'react-router-dom'
 import { ChevronDown, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
@@ -17,16 +16,13 @@ const Navbar = () => {
   }
 
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100"
+    <nav
+      className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 navbar-slide-in"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="ExcelfromPDF" className="h-16 w-auto" />
+            <img src="/logo-64.webp" alt="ExcelfromPDF" className="h-16 w-auto" width="64" height="64" />
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
@@ -109,10 +105,7 @@ const Navbar = () => {
         </div>
 
         {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+          <div
             className="md:hidden py-4 border-t border-gray-100"
           >
             <div className="grid grid-cols-1 gap-1 pb-4">
@@ -171,10 +164,10 @@ const Navbar = () => {
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
       </div>
-    </motion.nav>
+    </nav>
   )
 }
 
