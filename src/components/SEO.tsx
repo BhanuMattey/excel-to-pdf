@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'ExcelFromPDF'
-const SITE_URL = 'https://www.excelfrompdf.com'
+const SITE_URL = 'https://excelfrompdf.com'
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`
 
 interface SEOProps {

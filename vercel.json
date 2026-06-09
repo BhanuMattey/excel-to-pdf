@@ -40,19 +40,6 @@
       ]
     }
   ],
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "excelfrompdf.com"
-        }
-      ],
-      "destination": "https://www.excelfrompdf.com/:path*",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/python/:path*",
