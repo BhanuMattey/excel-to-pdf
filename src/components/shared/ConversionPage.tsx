@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
-import { CheckCircle2, Download, FileCheck2, Loader2, UploadCloud, X, Zap } from 'lucide-react'
+import { CheckCircle2, Download, FileCheck2, Loader2, LockKeyhole, UploadCloud, X, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Navbar, Footer } from '../layout'
 import SEO from '../SEO'
@@ -10,6 +10,7 @@ import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
+import { getExcelMaxSize, getPdfMaxSize } from '../../utils/uploadLimits'
 import { withExcelAdvertisingSuffix } from '../../utils/fileNames'
 
 interface ConversionPageProps {
@@ -32,6 +33,10 @@ const themes = {
     ring: 'focus:ring-brand-green-600',
     border: 'border-brand-green-300',
     button: 'bg-brand-green-700 hover:bg-brand-green-800',
+    dot: 'bg-brand-green-600',
+    ping: 'bg-brand-green-400',
+    blobA: 'bg-brand-green-200/50',
+    blobB: 'bg-brand-teal-200/50',
     gradientStyle: { background: 'linear-gradient(to bottom right, #166534, #0d9488, #0e7490)' } as React.CSSProperties,
     panelStyle: { background: 'linear-gradient(to bottom right, #f0fdf4, #ffffff, #f0fdfa)' } as React.CSSProperties,
   },
@@ -42,6 +47,10 @@ const themes = {
     ring: 'focus:ring-brand-green-600',
     border: 'border-brand-green-300',
     button: 'bg-brand-green-700 hover:bg-brand-green-800',
+    dot: 'bg-brand-green-600',
+    ping: 'bg-brand-green-400',
+    blobA: 'bg-brand-green-200/50',
+    blobB: 'bg-brand-teal-200/50',
     gradientStyle: { background: 'linear-gradient(to bottom right, #16a34a, #166534, #0e7490)' } as React.CSSProperties,
     panelStyle: { background: 'linear-gradient(to bottom right, #f0fdf4, #ffffff, #f0fdfa)' } as React.CSSProperties,
   },
@@ -52,6 +61,10 @@ const themes = {
     ring: 'focus:ring-brand-teal-600',
     border: 'border-brand-teal-300',
     button: 'bg-brand-teal-700 hover:bg-brand-teal-800',
+    dot: 'bg-brand-teal-600',
+    ping: 'bg-brand-teal-400',
+    blobA: 'bg-brand-teal-200/50',
+    blobB: 'bg-brand-green-200/50',
     gradientStyle: { background: 'linear-gradient(to bottom right, #0d9488, #0e7490, #166534)' } as React.CSSProperties,
     panelStyle: { background: 'linear-gradient(to bottom right, #f0fdfa, #ffffff, #f0fdf4)' } as React.CSSProperties,
   },
@@ -76,7 +89,10 @@ const ConversionPage = ({
   const { user, checkAndIncrementConversions, refreshConversionCount } = useAuth()
   const theme = themes[color] ?? themes.purple
 
-  const maxSize = maxSizeMB * 1024 * 1024
+  // Pro: 50 MB per file (server cap); Free: the page's free limit (5 MB default)
+  const maxSize = isPro
+    ? (fileType === 'excel' ? getExcelMaxSize(true) : getPdfMaxSize(true))
+    : maxSizeMB * 1024 * 1024
   const defaultAccept: Record<string, string[]> =
     fileType === 'excel'
       ? {
@@ -97,7 +113,7 @@ const ConversionPage = ({
   const onDropRejected = (rejections: { file: File; errors: readonly { code: string }[] }[]) => {
     rejections.forEach(({ file, errors }) => {
       if (errors[0]?.code === 'file-too-large') {
-        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} free limit.`)
+        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${isPro ? 'limit' : 'free limit'}.`)
         return
       }
       toast.error(`${file.name} is not a valid ${fileType === 'excel' ? 'Excel' : 'PDF'} file.`)
@@ -109,7 +125,7 @@ const ConversionPage = ({
     onDropRejected,
     accept: accept ?? defaultAccept,
     multiple: true,
-    maxSize: isPro ? undefined : maxSize,
+    maxSize,
     noClick: true,
   })
 
@@ -223,36 +239,67 @@ const ConversionPage = ({
       <Navbar />
       <main className="flex-grow pt-20 pb-16">
         <section className="relative overflow-hidden border-b border-gray-100" style={theme.panelStyle}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_28%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+          <div className={`pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl animate-blob ${theme.blobA}`} />
+          <div className={`pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl animate-blob-slow ${theme.blobB}`} />
+
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
             <div className="grid lg:grid-cols-[1fr_420px] gap-10 items-center">
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-                <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${theme.chip}`}>
-                  <Zap className="h-3.5 w-3.5" />
+                <div className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold shadow-sm ${theme.chip}`}>
+                  <span className="relative flex h-2 w-2">
+                    <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${theme.ping}`} />
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${theme.dot}`} />
+                  </span>
                   Fast cloud conversion
                 </div>
                 <h1 className="mt-6 text-4xl sm:text-5xl font-bold tracking-tight text-gray-950">{title}</h1>
                 <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">{description}</p>
+
+                <div className="mt-7 flex flex-wrap gap-3 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-gray-100 bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
+                    <LockKeyhole className="h-3.5 w-3.5 text-gray-400" />
+                    Files removed within 24 hours
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-gray-100 bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-brand-green-600" />
+                    No install needed
+                  </span>
+                </div>
               </motion.div>
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-3xl border border-white/80 bg-white/80 p-5 shadow-xl shadow-gray-950/10 backdrop-blur"
+                className="relative"
               >
-                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg" style={theme.gradientStyle}>
-                  <Icon className="h-7 w-7" />
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-600">
-                  {['Upload', 'Process', 'Download'].map((step, index) => (
-                    <div key={step} className="rounded-xl bg-gray-50 px-3 py-3">
-                      <div className={`mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full ${index === 1 ? theme.soft : 'bg-white'} ${theme.accent}`}>
-                        {index + 1}
-                      </div>
-                      {step}
+                <div className="absolute -inset-3 rounded-[1.75rem] bg-gradient-to-br from-white/60 to-white/20 blur-md" />
+                <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl shadow-gray-950/10">
+                  <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-green-300" />
+                    <span className="ml-3 inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 shadow-sm">
+                      <Icon className={`h-3 w-3 ${theme.accent}`} />
+                      {title.toLowerCase()}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg" style={theme.gradientStyle}>
+                      <Icon className="h-7 w-7" />
                     </div>
-                  ))}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-600">
+                      {['Upload', 'Process', 'Download'].map((step, index) => (
+                        <div key={step} className="rounded-xl bg-gray-50 px-3 py-3 transition-colors hover:bg-gray-100">
+                          <div className={`mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${index === 1 ? theme.soft : 'bg-white shadow-sm'} ${theme.accent}`}>
+                            {index + 1}
+                          </div>
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -268,21 +315,31 @@ const ConversionPage = ({
           >
             <div
               {...getRootProps()}
-              className={`relative overflow-hidden rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all ${
-                isDragActive ? `${theme.border} ${theme.soft}` : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              className={`relative overflow-hidden rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${
+                isDragActive ? `${theme.border} ${theme.soft} scale-[1.01]` : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
               <input {...getInputProps()} />
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg" style={theme.gradientStyle}>
+              <div
+                className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg transition-transform duration-300 ${isDragActive ? 'scale-110' : ''}`}
+                style={theme.gradientStyle}
+              >
                 <UploadCloud className="h-8 w-8" />
               </div>
               <h2 className="text-xl font-semibold text-gray-950">
                 {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} selected` : `Drop ${fileType === 'excel' ? 'Excel' : 'PDF'} files here`}
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                {isPro ? 'Multiple files supported.' : `Free uploads up to ${formatFileSize(maxSize)} per file.`}
+                {isPro
+                  ? `Multiple files supported — up to ${formatFileSize(maxSize)} each.`
+                  : `Free uploads up to ${formatFileSize(maxSize)} per file.`}
               </p>
-              <button type="button" onClick={open} className={`mt-6 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-colors ${theme.button}`}>
+              <button
+                type="button"
+                onClick={open}
+                className="btn-shine mt-6 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+                style={theme.gradientStyle}
+              >
                 Browse files
               </button>
             </div>
@@ -290,7 +347,7 @@ const ConversionPage = ({
             {files.length > 0 && (
               <div className="mt-5 grid gap-3">
                 {files.map((file, index) => (
-                  <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 transition-colors hover:bg-gray-100/70">
                     <div className="min-w-0 flex items-center gap-3">
                       <FileCheck2 className={`h-5 w-5 shrink-0 ${theme.accent}`} />
                       <div className="min-w-0">
@@ -299,7 +356,7 @@ const ConversionPage = ({
                       </div>
                     </div>
                     {!processing && (
-                      <button type="button" onClick={() => removeFile(index)} className="rounded-lg p-2 text-gray-400 hover:bg-white hover:text-red-500">
+                      <button type="button" onClick={() => removeFile(index)} className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white hover:text-red-500">
                         <X className="h-4 w-4" />
                       </button>
                     )}
@@ -315,7 +372,9 @@ const ConversionPage = ({
                   <span className={`font-semibold ${theme.accent}`}>{progress}%</span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-gray-200">
-                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, ...theme.gradientStyle }} />
+                  <div className="relative h-full overflow-hidden rounded-full transition-all duration-300" style={{ width: `${progress}%`, ...theme.gradientStyle }}>
+                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                  </div>
                 </div>
               </div>
             )}
@@ -338,14 +397,15 @@ const ConversionPage = ({
                   type="button"
                   onClick={handleProcess}
                   disabled={!files.length}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white shadow-lg transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 ${theme.button}`}
+                  className={`btn-shine inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none disabled:hover:translate-y-0 ${files.length ? '' : ''}`}
+                  style={files.length ? theme.gradientStyle : undefined}
                 >
                   <Zap className="h-4 w-4" />
                   Start conversion
                 </button>
               )}
               {processing && (
-                <button type="button" disabled className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white ${theme.button} opacity-80`}>
+                <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-sm font-semibold text-white opacity-80" style={theme.gradientStyle}>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Processing...
                 </button>
@@ -355,7 +415,11 @@ const ConversionPage = ({
                   <button type="button" onClick={() => { setFiles([]); setResults([]); setProgress(0) }} className="btn-secondary">
                     Convert more
                   </button>
-                  <button type="button" onClick={handleDownload} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="btn-shine inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+                  >
                     <Download className="h-4 w-4" />
                     Download files
                   </button>

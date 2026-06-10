@@ -21,7 +21,6 @@ import { useAuth } from '../context/AuthContext'
 import { usePlan } from '../context/PlanContext'
 import { formatFileSize } from '../utils/helpers'
 import { getExcelMaxSize } from '../utils/uploadLimits'
-import { formatExcelFilesInZip } from '../utils/excelFormatting'
 
 interface FileConfig {
   id: number
@@ -79,8 +78,8 @@ const SplitExcelPage = () => {
 
   const onDropRejected = (fileRejections: { file: File; errors: readonly { code: string }[] }[]) => {
     fileRejections.forEach(({ file, errors }) => {
-      if (errors[0]?.code === 'file-too-large' && freeLimitActive) {
-        toast.error(`${file.name} exceeds the ${freeLimitLabel} free limit.`)
+      if (errors[0]?.code === 'file-too-large') {
+        toast.error(`${file.name} exceeds the ${freeLimitLabel} ${freeLimitActive ? 'free limit' : 'limit'}.`)
         return
       }
       toast.error(`${file.name} is not a valid Excel file.`)
@@ -164,6 +163,7 @@ const SplitExcelPage = () => {
 
       const processedResults: SplitResult[] = []
       const totalFiles = files.length
+      const { formatExcelFilesInZip } = await import('../utils/excelFormatting')
 
       for (let i = 0; i < files.length; i++) {
         const fileConfig = files[i]
@@ -255,16 +255,23 @@ const SplitExcelPage = () => {
       <Navbar />
       <main className="flex-grow pt-20 pb-16">
         <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-lime-50 border-b border-gray-100">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(132,204,22,0.18),transparent_30%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+          <div className="pointer-events-none absolute -top-24 -left-24 h-80 w-80 rounded-full bg-emerald-200/50 blur-3xl animate-blob" />
+          <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-lime-200/50 blur-3xl animate-blob-slow" />
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
             <div className="grid lg:grid-cols-[1fr_420px] gap-10 items-center">
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
+                  </span>
                   <ScissorsLineDashed className="h-3.5 w-3.5" />
                   Split workbooks automatically
                 </div>
                 <h1 className="mt-6 text-4xl sm:text-5xl font-bold tracking-tight text-gray-950">
-                  Split Excel files by any column.
+                  Split Excel files{' '}
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-700">by any column.</span>
                 </h1>
                 <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">
                   Upload one or more spreadsheets, pick the sheet and column, then download clean ZIP files grouped by unique values.
@@ -275,20 +282,34 @@ const SplitExcelPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-3xl border border-white/80 bg-white/80 p-5 shadow-xl shadow-gray-950/10 backdrop-blur"
+                className="relative"
               >
-                <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-lime-500 text-white shadow-lg">
-                  <SplitSquareHorizontal className="h-7 w-7" />
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-600">
-                  {['Upload', 'Configure', 'Download ZIP'].map((step, index) => (
-                    <div key={step} className="rounded-xl bg-gray-50 px-3 py-3">
-                      <div className="mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                        {index + 1}
-                      </div>
-                      {step}
+                <div className="absolute -inset-3 rounded-[1.75rem] bg-gradient-to-br from-white/60 to-white/20 blur-md" />
+                <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl shadow-gray-950/10">
+                  <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-green-300" />
+                    <span className="ml-3 inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 shadow-sm">
+                      <SplitSquareHorizontal className="h-3 w-3 text-emerald-600" />
+                      split excel
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-lime-500 text-white shadow-lg">
+                      <SplitSquareHorizontal className="h-7 w-7" />
                     </div>
-                  ))}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-600">
+                      {['Upload', 'Configure', 'Download ZIP'].map((step, index) => (
+                        <div key={step} className="rounded-xl bg-gray-50 px-3 py-3 transition-colors hover:bg-gray-100">
+                          <div className="mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">
+                            {index + 1}
+                          </div>
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -303,21 +324,23 @@ const SplitExcelPage = () => {
           >
             <div
               {...getRootProps()}
-              className={`rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all ${
-                isDragActive ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30'
+              className={`rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${
+                isDragActive ? 'border-emerald-300 bg-emerald-50 scale-[1.01]' : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30'
               }`}
             >
               <input {...getInputProps()} />
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-lime-500 text-white shadow-lg">
+              <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-lime-500 text-white shadow-lg transition-transform duration-300 ${isDragActive ? 'scale-110' : ''}`}>
                 <UploadCloud className="h-8 w-8" />
               </div>
               <h2 className="text-xl font-semibold text-gray-950">
                 {files.length ? `${files.length} Excel file${files.length > 1 ? 's' : ''} selected` : 'Drop Excel files here'}
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                .xlsx supported. Free uploads up to {freeLimitLabel} per file.
+                {freeLimitActive
+                  ? `.xlsx supported. Free uploads up to ${freeLimitLabel} per file.`
+                  : `.xlsx supported. Upload files up to ${freeLimitLabel} each.`}
               </p>
-              <button type="button" onClick={open} className="mt-6 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+              <button type="button" onClick={open} className="btn-shine mt-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
                 Browse Excel files
               </button>
             </div>
@@ -400,7 +423,7 @@ const SplitExcelPage = () => {
                   type="button"
                   onClick={handleProcess}
                   disabled={files.length === 0}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  className="btn-shine inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:bg-none disabled:shadow-none disabled:hover:translate-y-0"
                 >
                   <Zap className="h-4 w-4" />
                   Split files
@@ -417,7 +440,7 @@ const SplitExcelPage = () => {
                   <button type="button" onClick={() => { setFiles([]); setResults([]); setProgress(0) }} className="btn-secondary">
                     Split more
                   </button>
-                  <button type="button" onClick={handleDownloadAll} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+                  <button type="button" onClick={handleDownloadAll} className="btn-shine inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
                     <Download className="h-4 w-4" />
                     Download ZIP files
                   </button>

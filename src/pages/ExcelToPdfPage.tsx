@@ -11,7 +11,7 @@ const ExcelToPdfPage = () => (
     serviceCall={pdfService.excelToPdf.bind(pdfService)}
     getOutputName={(name) => name.replace(/\.(xlsx|xls|xlsm)$/i, '_converted.pdf')}
     fileType="excel"
-    maxSizeMB={10}
+    maxSizeMB={5}
   />
 )
 

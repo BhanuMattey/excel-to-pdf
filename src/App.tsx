@@ -1,10 +1,37 @@
-import React, { lazy, Suspense } from 'react'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import LandingPage from './pages/LandingPage'
+
+// Mounts analytics only after the browser is idle so they never compete
+// with rendering the page itself.
+function DeferredAnalytics() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const start = () => {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => setReady(true), { timeout: 5000 })
+      } else {
+        setTimeout(() => setReady(true), 3000)
+      }
+    }
+    if (document.readyState === 'complete') start()
+    else {
+      window.addEventListener('load', start, { once: true })
+      return () => window.removeEventListener('load', start)
+    }
+  }, [])
+  if (!ready) return null
+  return (
+    <>
+      <Analytics />
+      <SpeedInsights />
+    </>
+  )
+}
 
 const AppProviders = lazy(() => import('./AppProviders'))
-const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const SignupPage = lazy(() => import('./pages/SignupPage'))
 const ProtectedDashboardRoute = lazy(() => import('./pages/ProtectedDashboardRoute'))
@@ -53,8 +80,7 @@ function App() {
           <Route path="/profile" element={<Navigate to="/dashboard#profile" replace />} />
         </Routes>
       </Suspense>
-      <Analytics />
-      <SpeedInsights />
+      <DeferredAnalytics />
     </>
   )
 }

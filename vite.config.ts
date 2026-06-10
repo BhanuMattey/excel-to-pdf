@@ -761,18 +761,16 @@ function localApiPlugin() {
   }
 }
 
-// Converts Vite's injected <link rel="stylesheet"> to async non-render-blocking load.
-// Inline critical CSS ensures the page has minimal styling before the full CSS loads.
+// Removes Vite's eagerly injected stylesheet. The inline landing shell has its
+// critical CSS, and Vite's dynamic import helper loads the full app CSS when
+// React boots.
 function deferCssPlugin() {
   return {
-    name: 'defer-css',
+    name: 'defer-app-css',
     transformIndexHtml(html: string) {
-      // Convert injected stylesheet links to preload + async swap
       return html.replace(
         /<link rel="stylesheet" crossorigin href="([^"]+\.css)">/g,
-        (_, href) =>
-          `<link rel="preload" as="style" href="${href}" onload="this.onload=null;this.rel='stylesheet'">` +
-          `<noscript><link rel="stylesheet" href="${href}"></noscript>`
+        ''
       )
     },
   }
@@ -781,6 +779,9 @@ function deferCssPlugin() {
 export default defineConfig({
   plugins: [react(), localApiPlugin(), deferCssPlugin()],
   build: {
+    modulePreload: {
+      polyfill: false,
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

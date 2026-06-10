@@ -75,13 +75,13 @@ const UploadBox = () => {
   const onDropRejected = useCallback((fileRejections: { file: File; errors: readonly { code: string }[] }[]) => {
     fileRejections.forEach(({ file, errors }) => {
       if (errors[0]?.code === 'file-too-large') {
-        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} free limit.`)
+        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${isPro ? 'limit' : 'free limit'}.`)
         return
       }
 
       toast.error(`${file.name} is not a valid PDF file.`)
     })
-  }, [maxSize])
+  }, [maxSize, isPro])
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,

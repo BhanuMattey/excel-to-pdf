@@ -1,6 +1,6 @@
-import { Footer } from '../components/layout'
+import Footer from '../components/layout/Footer'
 import PublicNavbar from '../components/layout/PublicNavbar'
-import { Hero, Features, TrustedBy } from '../components/home'
+import { Hero, Features, TrustedBy, ToolsShowcase } from '../components/home'
 
 const LandingPage = () => {
   return (
@@ -9,6 +9,7 @@ const LandingPage = () => {
       <main className="flex-grow">
         <Hero />
         <Features />
+        <ToolsShowcase />
         <TrustedBy />
       </main>
       <Footer />

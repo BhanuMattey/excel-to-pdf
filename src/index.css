@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  @font-face {
+    font-family: Inter;
+    src: url('/fonts/inter-variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body { @apply font-sans text-gray-900 antialiased bg-white; }
@@ -19,10 +26,12 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
-    background-color: #166534;
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all duration-300 shadow-lg shadow-brand-green-700/25 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background-image: linear-gradient(to right, #166534, #0e7490);
   }
-  .btn-primary:hover { background-color: #14532d; }
+  .btn-primary:hover {
+    @apply -translate-y-0.5 shadow-xl shadow-brand-green-700/30;
+  }
   .btn-primary:focus { --tw-ring-color: #16a34a; }
   .btn-secondary {
     @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2;
@@ -75,4 +84,38 @@
     to   { transform: translateY(0);     opacity: 1; }
   }
   .navbar-slide-in { animation: navbar-slide 0.4s ease forwards; }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-up { animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .anim-delay-100 { animation-delay: 100ms; }
+  .anim-delay-200 { animation-delay: 200ms; }
+  .anim-delay-300 { animation-delay: 300ms; }
+  .anim-delay-400 { animation-delay: 400ms; }
+  .anim-delay-500 { animation-delay: 500ms; }
+
+  @keyframes blob-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(28px, -22px) scale(1.06); }
+    66%      { transform: translate(-18px, 16px) scale(0.96); }
+  }
+  .animate-blob { animation: blob-drift 16s ease-in-out infinite; will-change: transform; }
+  .animate-blob-slow { animation: blob-drift 22s ease-in-out infinite reverse; will-change: transform; }
+  /* Blurred layers are expensive to animate on mobile CPUs — keep them static there */
+  @media (max-width: 639px) {
+    .animate-blob, .animate-blob-slow { animation: none; will-change: auto; }
+  }
+
+  .btn-shine { position: relative; overflow: hidden; }
+  .btn-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-130%) skewX(-20deg);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transition: transform 0.7s ease;
+  }
+  .btn-shine:hover::after { transform: translateX(130%) skewX(-20deg); }
 }

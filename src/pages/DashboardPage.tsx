@@ -7,6 +7,7 @@ import {
   CreditCard,
   Download,
   FileText,
+  History,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -212,27 +213,45 @@ const DashboardPage = () => {
       <main className="flex-grow pt-20 pb-10 sm:pb-12">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
 
-          {/* Header */}
+          {/* Header banner */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <div
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-lg shrink-0"
-                style={{ background: 'linear-gradient(135deg, #166534, #0e7490)' }}
-              >
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="truncate text-xl font-bold text-gray-900 sm:text-2xl">Welcome, {displayName}</h1>
-                <p className="truncate text-sm text-gray-500">{user?.email}</p>
-              </div>
-              {isPro && (
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white sm:ml-auto"
-                  style={{ background: 'linear-gradient(to right, #166534, #0e7490)' }}
+            <div className="relative overflow-hidden rounded-3xl bg-gray-950 px-5 py-6 text-white shadow-xl shadow-gray-950/10 sm:px-8 sm:py-7">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:2.5rem_2.5rem]" />
+              <div className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-brand-green-600/25 blur-3xl animate-blob" />
+              <div className="pointer-events-none absolute -bottom-24 left-1/4 h-56 w-56 rounded-full bg-brand-teal-600/25 blur-3xl animate-blob-slow" />
+
+              <div className="relative flex flex-wrap items-center gap-4">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold shadow-lg ring-2 ring-white/20 sm:h-14 sm:w-14 sm:text-xl"
+                  style={{ background: 'linear-gradient(135deg, #16a34a, #0d9488)' }}
                 >
-                  <Sparkles className="w-3 h-3" /> Pro
-                </span>
-              )}
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-400">Welcome back</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-xl font-bold sm:text-2xl">{displayName}</h1>
+                    {isPro ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-brand-green-600 to-brand-teal-600 px-2.5 py-1 text-[11px] font-bold shadow-sm">
+                        <Sparkles className="h-3 w-3" /> Pro
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-bold text-gray-300">
+                        Free plan
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-sm text-gray-400">{user?.email}</p>
+                </div>
+                {!isPro && (
+                  <Link
+                    to="/pricing"
+                    className="btn-shine hidden items-center gap-2 rounded-xl bg-gradient-to-r from-brand-green-600 to-brand-teal-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-brand-green-900/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl sm:inline-flex"
+                  >
+                    <Zap className="h-3.5 w-3.5" /> Upgrade to Pro
+                  </Link>
+                )}
+              </div>
             </div>
           </motion.div>
 
@@ -244,54 +263,79 @@ const DashboardPage = () => {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.05 }}
-              className="hidden md:flex flex-col gap-2 w-52 shrink-0"
+              className="hidden md:flex flex-col gap-3 w-56 shrink-0 md:sticky md:top-20 md:self-start"
             >
               <nav className="rounded-2xl bg-white border border-gray-100 shadow-sm p-2">
+                <p className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Workspace</p>
                 <button
                   onClick={() => switchTab('dashboard')}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
                     activeTab === 'dashboard'
-                      ? 'bg-green-50 text-green-800'
+                      ? 'bg-gradient-to-r from-brand-green-50 to-brand-teal-50 text-brand-green-800 shadow-sm'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <LayoutDashboard className="w-4 h-4 shrink-0" />
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
+                      activeTab === 'dashboard' ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                    }`}
+                    style={activeTab === 'dashboard' ? { background: 'linear-gradient(135deg, #166534, #0d9488)' } : undefined}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                  </span>
                   Dashboard
                 </button>
                 <button
                   onClick={() => switchTab('profile')}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
                     activeTab === 'profile'
-                      ? 'bg-green-50 text-green-800'
+                      ? 'bg-gradient-to-r from-brand-green-50 to-brand-teal-50 text-brand-green-800 shadow-sm'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <User className="w-4 h-4 shrink-0" />
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
+                      activeTab === 'profile' ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                    }`}
+                    style={activeTab === 'profile' ? { background: 'linear-gradient(135deg, #166534, #0d9488)' } : undefined}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                  </span>
                   Profile &amp; Billing
                 </button>
                 <Link
                   to="/pricing"
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all duration-200"
                 >
-                  <BadgeCheck className="w-4 h-4 shrink-0" />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors group-hover:bg-gray-200">
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                  </span>
                   Plans &amp; Pricing
                 </Link>
+                <div className="my-1.5 border-t border-gray-100" />
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                  className="group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 transition-all duration-200"
                 >
-                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500 transition-colors group-hover:bg-red-100">
+                    <LogOut className="w-3.5 h-3.5" />
+                  </span>
                   Sign Out
                 </button>
               </nav>
 
               {/* Trust card */}
-              <div className="rounded-2xl bg-green-50 border border-green-100 p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Shield className="w-4 h-4 text-green-700" />
-                  <p className="text-xs font-bold text-green-800">Your data is safe</p>
+              <div className="relative overflow-hidden rounded-2xl border border-brand-green-100 bg-gradient-to-br from-brand-green-50 to-brand-teal-50 p-4">
+                <div className="pointer-events-none absolute -bottom-8 -right-8 h-24 w-24 rounded-full bg-brand-green-200/50 blur-2xl" />
+                <div className="relative">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #166534, #0d9488)' }}>
+                      <Shield className="w-3.5 h-3.5" />
+                    </span>
+                    <p className="text-xs font-bold text-brand-green-800">Your data is safe</p>
+                  </div>
+                  <p className="text-xs leading-relaxed text-brand-green-700">Files are encrypted in transit and deleted within 24 hours.</p>
                 </div>
-                <p className="text-xs text-green-700 leading-relaxed">Files are encrypted in transit and deleted within 24 hours.</p>
               </div>
             </motion.aside>
 
@@ -299,9 +343,9 @@ const DashboardPage = () => {
             <div className="md:hidden grid grid-cols-2 gap-2 w-full">
               <button
                 onClick={() => switchTab('dashboard')}
-                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-all duration-200 ${
                   activeTab === 'dashboard'
-                    ? 'bg-green-50 border-green-200 text-green-800'
+                    ? 'border-brand-green-200 bg-gradient-to-r from-brand-green-50 to-brand-teal-50 text-brand-green-800 shadow-sm'
                     : 'bg-white border-gray-200 text-gray-600'
                 }`}
               >
@@ -309,9 +353,9 @@ const DashboardPage = () => {
               </button>
               <button
                 onClick={() => switchTab('profile')}
-                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition-all duration-200 ${
                   activeTab === 'profile'
-                    ? 'bg-green-50 border-green-200 text-green-800'
+                    ? 'border-brand-green-200 bg-gradient-to-r from-brand-green-50 to-brand-teal-50 text-brand-green-800 shadow-sm'
                     : 'bg-white border-gray-200 text-gray-600'
                 }`}
               >
@@ -329,10 +373,10 @@ const DashboardPage = () => {
                     <UsageStats />
                   </motion.div>
 
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:p-6">
                     <div className="mb-5 flex items-center gap-3 sm:mb-6">
-                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                        <Upload className="w-5 h-5 text-primary-600" />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #166534, #0d9488)' }}>
+                        <Upload className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
                         <h2 className="text-lg font-semibold text-gray-900">Convert a PDF</h2>
@@ -342,8 +386,16 @@ const DashboardPage = () => {
                     <UploadBox />
                   </motion.div>
 
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-6">Conversion History</h2>
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:p-6">
+                    <div className="mb-5 flex items-center gap-3 sm:mb-6">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #0e7490, #0d9488)' }}>
+                        <History className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-semibold text-gray-900">Conversion History</h2>
+                        <p className="text-sm text-gray-500">Your recent files — downloads stay live for 24 hours</p>
+                      </div>
+                    </div>
                     <ConversionHistory />
                   </motion.div>
                 </div>
@@ -354,19 +406,23 @@ const DashboardPage = () => {
                 <div className="space-y-6">
 
                   {/* Plan card */}
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-5 border-b border-gray-100">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Current Plan</p>
-                      <div className="flex items-center gap-2">
-                        {isPro
-                          ? <Zap className="w-5 h-5 text-green-700" />
-                          : <User className="w-5 h-5 text-gray-400" />}
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                    <div className="h-1 bg-gradient-to-r from-brand-green-600 via-brand-teal-600 to-brand-amber-500" />
+                    <div className="border-b border-gray-100 p-5">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Current Plan</p>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${isPro ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
+                          style={isPro ? { background: 'linear-gradient(135deg, #166534, #0d9488)' } : undefined}
+                        >
+                          {isPro ? <Zap className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                        </span>
                         <span className="text-lg font-bold text-gray-900">
                           {isPro ? planLabel(planProfile?.planId ?? null) : 'Free'}
                         </span>
                       </div>
                     </div>
-                    <div className="p-5 space-y-3 text-sm text-gray-600">
+                    <div className="space-y-3 p-5 text-sm text-gray-600">
                       {isPro && renewalDate && (
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
@@ -388,12 +444,11 @@ const DashboardPage = () => {
                         <p className="text-xs text-gray-500">Upgrade to unlock unlimited conversions and priority support.</p>
                       )}
                     </div>
-                    <div className="p-5 pt-0 flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2 p-5 pt-0 sm:flex-row">
                       {!isPro && (
                         <Link
                           to="/pricing"
-                          className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition-colors"
-                          style={{ background: 'linear-gradient(to right, #166534, #0e7490)' }}
+                          className="btn-shine flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-green-700 to-brand-teal-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-green-700/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
                         >
                           <Zap className="w-4 h-4" /> Upgrade to Pro
                         </Link>
@@ -418,22 +473,31 @@ const DashboardPage = () => {
                   </motion.div>
 
                   {/* Billing history */}
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="px-4 py-5 border-b border-gray-100 flex items-center justify-between gap-3 sm:px-6">
-                      <h2 className="text-base font-bold text-gray-900">Billing History</h2>
-                      <span className="text-xs text-gray-400">{payments.length} invoice{payments.length !== 1 ? 's' : ''}</span>
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-5 sm:px-6">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #0e7490, #0d9488)' }}>
+                          <CreditCard className="w-4 h-4" />
+                        </span>
+                        <h2 className="text-base font-bold text-gray-900">Billing History</h2>
+                      </div>
+                      <span className="rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+                        {payments.length} invoice{payments.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
 
                     {loadingPayments ? (
                       <div className="flex items-center justify-center py-16">
-                        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-brand-green-600 animate-spin" />
                       </div>
                     ) : payments.length === 0 ? (
-                      <div className="text-center py-16 px-6">
-                        <CreditCard className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                        <h3 className="text-sm font-semibold text-gray-900 mb-1">No payments yet</h3>
-                        <p className="text-xs text-gray-500 mb-4">Your billing history will appear here after your first payment.</p>
-                        <Link to="/pricing" className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700 hover:underline">
+                      <div className="px-6 py-16 text-center">
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
+                          <CreditCard className="h-6 w-6 text-gray-300" />
+                        </div>
+                        <h3 className="mb-1 text-sm font-semibold text-gray-900">No payments yet</h3>
+                        <p className="mb-4 text-xs text-gray-500">Your billing history will appear here after your first payment.</p>
+                        <Link to="/pricing" className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-green-700 hover:underline">
                           <Zap className="w-3.5 h-3.5" /> Upgrade to Pro
                         </Link>
                       </div>
@@ -445,14 +509,14 @@ const DashboardPage = () => {
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.04 }}
-                            className="flex flex-col gap-3 px-4 py-4 hover:bg-gray-50 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                            className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-gray-50/70 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-50">
-                                <FileText className="w-4 h-4 text-green-700" />
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-green-50 to-brand-teal-50 ring-1 ring-brand-green-100">
+                                <FileText className="w-4 h-4 text-brand-green-700" />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{planLabel(p.plan_id)}</p>
+                                <p className="truncate text-sm font-semibold text-gray-900">{planLabel(p.plan_id)}</p>
                                 <p className="text-xs text-gray-400">{formatDate(p.created_at)} · {p.payment_type === 'subscription' ? 'Subscription' : 'One-time'}</p>
                               </div>
                             </div>
@@ -460,12 +524,13 @@ const DashboardPage = () => {
                               <span className="text-sm font-bold text-gray-900">
                                 {formatCurrency(p.display_amount, p.amount, p.currency)}
                               </span>
-                              <span className="inline-flex items-center rounded-full bg-green-50 border border-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-green-100 bg-brand-green-50 px-2.5 py-0.5 text-xs font-semibold text-brand-green-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-green-600" />
                                 Paid
                               </span>
                               <button
                                 onClick={() => printInvoice(p, displayName, user?.email ?? '')}
-                                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-50 hover:shadow-sm"
                               >
                                 <Download className="w-3.5 h-3.5" />
                                 Invoice
