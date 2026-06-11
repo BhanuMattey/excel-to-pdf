@@ -1,11 +1,47 @@
 import { Link } from 'react-router-dom'
 import { ChevronDown, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toolItems, toolToneClasses } from './toolItems'
+
+// Checks for an active session after mount via a dynamic import so the auth
+// client stays out of the landing page's critical bundle. Without this the
+// navbar always showed Log in / Sign up, making logged-in users think their
+// session was lost when they navigated to the PDF-to-Excel tool (path "/").
+const useSessionUser = () => {
+  const [sessionUser, setSessionUser] = useState<{ id: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    import('../../lib/auth-client')
+      .then(({ authClient }) => authClient.getSession())
+      .then((res) => {
+        if (cancelled) return
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const user = (res as any)?.data?.user ?? null
+        setSessionUser(user)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const signOut = async () => {
+    const { authClient } = await import('../../lib/auth-client')
+    await authClient.signOut()
+    // Mirror AuthContext.signOut cleanup so both navbars behave the same.
+    localStorage.removeItem('session_token')
+    localStorage.removeItem('anonConversions')
+    localStorage.removeItem('anonAtLogin')
+    localStorage.removeItem('authSessionStartedAt')
+    setSessionUser(null)
+  }
+
+  return { sessionUser, signOut }
+}
 
 const PublicNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isToolsOpen, setIsToolsOpen] = useState(false)
+  const { sessionUser, signOut } = useSessionUser()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 navbar-slide-in">
@@ -59,10 +95,21 @@ const PublicNavbar = () => {
             </div>
 
             <Link to="/pricing" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Pricing</Link>
-            <Link to="/login" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Log in</Link>
-            <Link to="/signup" className="px-4 py-1.5 bg-brand-green-700 text-white text-sm font-semibold rounded-lg hover:bg-brand-green-800 transition-colors">
-              Sign up free
-            </Link>
+            {sessionUser ? (
+              <>
+                <Link to="/dashboard" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Dashboard</Link>
+                <button onClick={signOut} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Log in</Link>
+                <Link to="/signup" className="px-4 py-1.5 bg-brand-green-700 text-white text-sm font-semibold rounded-lg hover:bg-brand-green-800 transition-colors">
+                  Sign up free
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -100,10 +147,27 @@ const PublicNavbar = () => {
             </div>
             <div className="flex flex-col gap-4 border-t border-gray-100 pt-4">
               <Link to="/pricing" className="text-sm text-gray-600" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
-              <Link to="/login" className="text-sm text-gray-600" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-              <Link to="/signup" className="px-4 py-2 bg-brand-green-700 text-white text-sm font-semibold rounded-lg text-center" onClick={() => setIsMenuOpen(false)}>
-                Sign up free
-              </Link>
+              {sessionUser ? (
+                <>
+                  <Link to="/dashboard" className="text-sm text-gray-600" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+                  <button
+                    onClick={() => {
+                      signOut()
+                      setIsMenuOpen(false)
+                    }}
+                    className="text-sm text-gray-600 text-left"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="text-sm text-gray-600" onClick={() => setIsMenuOpen(false)}>Log in</Link>
+                  <Link to="/signup" className="px-4 py-2 bg-brand-green-700 text-white text-sm font-semibold rounded-lg text-center" onClick={() => setIsMenuOpen(false)}>
+                    Sign up free
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

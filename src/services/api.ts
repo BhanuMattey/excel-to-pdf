@@ -1,18 +1,15 @@
 import axios, { AxiosProgressEvent } from 'axios'
 
-// Proxy through /api/python/* on our own origin to avoid mixed-content.
-// Routes are /convertexcel etc, so baseURL must not include /api
-// to avoid doubling: baseURL(/api/python) + path(/convertexcel)
-// would produce /api/python/convertexcel (wrong).
-// Instead baseURL=/api/python + path=/convertexcel = /api/python/convertexcel,
-// and the serverless proxy prepends /api before forwarding to Python.
-const API_URL = typeof window !== 'undefined'
-  ? `${window.location.origin}/api/python`
-  : '/api/python'
+// Call the Python API directly from the browser. Routing uploads through the
+// /api/python/* Vercel proxy capped request bodies at ~4.5 MB (a hard Vercel
+// platform limit), which returned 413 for any file over ~5 MB regardless of plan.
+// The Python backend must allow this site's origin in its CORS allowlist.
+const API_URL = import.meta.env.VITE_PYTHON_API_URL || 'https://api.excelfrompdf.com/api'
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 120000,
+  // Generous timeout: large pro uploads (up to 50 MB) on slow links need time.
+  timeout: 300000,
 })
 
 interface Job {

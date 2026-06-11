@@ -94,11 +94,40 @@ export const conversionService = {
   },
 }
 
+// Vercel rejects request bodies over ~4.5 MB with a 413, so anything bigger
+// must go to R2 directly via a presigned PUT instead of through /api/r2/upload.
+const PROXY_UPLOAD_LIMIT = 4 * 1024 * 1024
+
+const EXT_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  zip: 'application/zip',
+}
+
 export const r2Service = {
-  uploadFile: (blob: Blob, filename: string): Promise<{ key: string; url: string; expiresAt: string }> => {
-    const form = new FormData()
-    form.append('file', blob, filename)
-    return handleLocal(r2Api.post('/api/r2/upload', form))
+  uploadFile: async (blob: Blob, filename: string): Promise<{ key: string; url: string; expiresAt: string }> => {
+    if (blob.size <= PROXY_UPLOAD_LIMIT) {
+      const form = new FormData()
+      form.append('file', blob, filename)
+      return handleLocal(r2Api.post('/api/r2/upload', form))
+    }
+
+    const ext = filename.split('.').pop()?.toLowerCase() || ''
+    const contentType = EXT_MIME[ext] || 'application/octet-stream'
+    const { key, uploadUrl, url, expiresAt } = await handleLocal<{
+      key: string; uploadUrl: string; url: string; expiresAt: string
+    }>(r2Api.post('/api/r2/upload-url', { filename, contentType }))
+
+    // Presigned PUT — no auth headers, the signature in the URL authorizes it.
+    await axios.put(uploadUrl, blob, {
+      headers: { 'Content-Type': contentType },
+      timeout: 300000,
+    })
+
+    return { key, url, expiresAt }
   },
 
   getDownloadUrl: (key: string): Promise<{ url: string }> =>

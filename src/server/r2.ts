@@ -41,6 +41,22 @@ export async function getPresignedUrl(key: string): Promise<string> {
   )
 }
 
+// Presigned PUT so the browser can upload large files straight to R2,
+// bypassing Vercel's ~4.5 MB request body limit. The signature pins the
+// content type, so the client must send the same Content-Type header.
+export async function getPresignedPutUrl(key: string, contentType: string): Promise<string> {
+  return getSignedUrl(
+    r2,
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      ContentType: contentType,
+      Metadata: { 'expires-in': '86400' },
+    }),
+    { expiresIn: 600 }
+  )
+}
+
 export async function deleteFromR2(key: string): Promise<void> {
   try {
     await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
