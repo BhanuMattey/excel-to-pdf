@@ -25,7 +25,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set origin to the Neon auth domain so it looks like a same-origin server call
   forwardHeaders['origin'] = 'https://ep-icy-resonance-aqkewacl.neonauth.c-8.us-east-1.aws.neon.tech'
 
-  let body: Buffer | undefined
+  // fetch() rejects Node's Buffer type (Buffer<ArrayBufferLike> is not BodyInit),
+  // so re-wrap as a plain Uint8Array.
+  let body: Uint8Array<ArrayBuffer> | undefined
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks: Buffer[] = []
     await new Promise<void>((resolve, reject) => {
@@ -34,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req.on('error', reject)
     })
     const buf = Buffer.concat(chunks)
-    if (buf.length > 0) body = buf
+    if (buf.length > 0) body = new Uint8Array(buf)
   }
 
   const upstream = await fetch(target, {
