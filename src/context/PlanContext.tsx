@@ -21,6 +21,9 @@ interface PlanContextValue {
   upgradePlan: (plan: Plan, profile?: Partial<PlanProfile>) => void
   isPro: boolean
   planLoading: boolean
+  // False until auth has settled AND the billing profile fetch finished.
+  // While false, isPro is not trustworthy — don't enforce free-plan limits yet.
+  planResolved: boolean
   refreshPlan: () => Promise<void>
 }
 
@@ -33,11 +36,12 @@ export const usePlan = (): PlanContextValue => {
 }
 
 export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [currentPlan, setCurrentPlan] = useState<Plan>('free')
   const [planProfile, setPlanProfile] = useState<PlanProfile | null>(null)
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
   const [planLoading, setPlanLoading] = useState(false)
+  const [planResolved, setPlanResolved] = useState(false)
 
   const fetchPlan = useCallback(async (userId: string, email: string) => {
     setPlanLoading(true)
@@ -74,13 +78,20 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   useEffect(() => {
+    if (authLoading) {
+      setPlanResolved(false)
+      return
+    }
     if (user?.id && user?.email) {
-      fetchPlan(user.id, user.email)
+      setPlanResolved(false)
+      // fetchPlan never rejects (errors are swallowed inside), so this always resolves
+      fetchPlan(user.id, user.email).then(() => setPlanResolved(true))
     } else {
       setCurrentPlan('free')
       setPlanProfile(null)
+      setPlanResolved(true)
     }
-  }, [user?.id, user?.email, fetchPlan])
+  }, [authLoading, user?.id, user?.email, fetchPlan])
 
   const upgradePlan = (plan: Plan, profile?: Partial<PlanProfile>) => {
     setCurrentPlan(plan)
@@ -106,6 +117,7 @@ export const PlanProvider = ({ children }: { children: React.ReactNode }) => {
       upgradePlan,
       isPro: currentPlan === 'pro',
       planLoading,
+      planResolved,
       refreshPlan,
     }}>
       {children}

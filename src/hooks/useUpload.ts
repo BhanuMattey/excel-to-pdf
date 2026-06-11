@@ -19,13 +19,15 @@ interface ConversionRecord {
 
 export const useUpload = () => {
   const { user, refreshConversionCount, checkAndIncrementConversions, hasFreeConversions, remainingFreeConversions } = useAuth()
-  const { isPro } = usePlan()
+  const { isPro, planResolved } = usePlan()
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle')
   const [progress, setProgress] = useState(0)
   const [currentFiles, setCurrentFiles] = useState<File[]>([])
   const [outputBlobs, setOutputBlobs] = useState<ConversionResult[]>([])
   const [error, setError] = useState<string | null>(null)
-  const maxFileSize = getPdfMaxSize(isPro)
+  // Until the plan fetch settles, validate against the pro limit so a pro user
+  // isn't falsely rejected with the free cap during the loading window.
+  const maxFileSize = getPdfMaxSize(isPro || !planResolved)
 
   const validateFiles = useCallback((files: File[]) => {
     if (!files?.length) return { valid: false, error: 'No files selected' }

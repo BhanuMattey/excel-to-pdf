@@ -40,10 +40,13 @@ const SplitExcelPage = () => {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<SplitResult[]>([])
-  const { isPro } = usePlan()
+  const { isPro, planResolved } = usePlan()
   const { user, checkAndIncrementConversions, refreshConversionCount } = useAuth()
-  const maxFileSize = getExcelMaxSize(isPro)
-  const freeLimitActive = !isPro
+  // While the plan fetch is pending, assume pro so pro users aren't falsely
+  // rejected with the free cap during the loading window.
+  const assumePro = isPro || !planResolved
+  const maxFileSize = getExcelMaxSize(assumePro)
+  const freeLimitActive = !assumePro
   const freeLimitLabel = formatFileSize(maxFileSize)
 
   const validTypes = [

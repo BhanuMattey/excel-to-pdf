@@ -10,7 +10,7 @@ import { conversionService, r2Service } from '../../services/db'
 import { useAuth } from '../../context/AuthContext'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
-import { getExcelMaxSize, getPdfMaxSize } from '../../utils/uploadLimits'
+import { getExcelMaxSize, getPdfMaxSize, LARGE_FILE_NOTICE_THRESHOLD } from '../../utils/uploadLimits'
 import { withExcelAdvertisingSuffix } from '../../utils/fileNames'
 
 interface ConversionPageProps {
@@ -85,12 +85,15 @@ const ConversionPage = ({
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<{ jobId: string; blob: Blob }[]>([])
-  const { isPro } = usePlan()
+  const { isPro, planResolved } = usePlan()
   const { user, checkAndIncrementConversions, refreshConversionCount } = useAuth()
   const theme = themes[color] ?? themes.purple
 
-  // Pro: 50 MB per file (server cap); Free: the page's free limit (5 MB default)
-  const maxSize = isPro
+  // Pro: 50 MB per file (server cap); Free: the page's free limit (5 MB default).
+  // While the plan fetch is pending, assume pro so pro users aren't falsely
+  // rejected with the free cap during the loading window.
+  const assumePro = isPro || !planResolved
+  const maxSize = assumePro
     ? (fileType === 'excel' ? getExcelMaxSize(true) : getPdfMaxSize(true))
     : maxSizeMB * 1024 * 1024
   const defaultAccept: Record<string, string[]> =
@@ -113,7 +116,7 @@ const ConversionPage = ({
   const onDropRejected = (rejections: { file: File; errors: readonly { code: string }[] }[]) => {
     rejections.forEach(({ file, errors }) => {
       if (errors[0]?.code === 'file-too-large') {
-        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${isPro ? 'limit' : 'free limit'}.`)
+        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${assumePro ? 'limit' : 'free limit'}.`)
         return
       }
       toast.error(`${file.name} is not a valid ${fileType === 'excel' ? 'Excel' : 'PDF'} file.`)
@@ -330,7 +333,7 @@ const ConversionPage = ({
                 {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} selected` : `Drop ${fileType === 'excel' ? 'Excel' : 'PDF'} files here`}
               </h2>
               <p className="mt-2 text-sm text-gray-500">
-                {isPro
+                {assumePro
                   ? `Multiple files supported — up to ${formatFileSize(maxSize)} each.`
                   : `Free uploads up to ${formatFileSize(maxSize)} per file.`}
               </p>
@@ -376,6 +379,12 @@ const ConversionPage = ({
                     <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                   </div>
                 </div>
+                {files.reduce((s, f) => s + f.size, 0) >= LARGE_FILE_NOTICE_THRESHOLD && (
+                  <p className="mt-3 text-xs font-medium text-amber-600">
+                    Large upload ({formatFileSize(files.reduce((s, f) => s + f.size, 0))}) —
+                    conversion can take a few minutes. Keep this tab open.
+                  </p>
+                )}
               </div>
             )}
 

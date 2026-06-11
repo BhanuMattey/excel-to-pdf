@@ -37,11 +37,11 @@ function useCyclingFact(active: boolean) {
 import { useUpload } from '../../hooks/useUpload'
 import { usePlan } from '../../context/PlanContext'
 import { formatFileSize } from '../../utils/helpers'
-import { FREE_PDF_SIZE_LIMIT, DEFAULT_PRO_PDF_SIZE_LIMIT } from '../../utils/uploadLimits'
+import { FREE_PDF_SIZE_LIMIT, DEFAULT_PRO_PDF_SIZE_LIMIT, LARGE_FILE_NOTICE_THRESHOLD } from '../../utils/uploadLimits'
 import ProgressBar from './ProgressBar'
 
 const UploadBox = () => {
-  const { isPro } = usePlan()
+  const { isPro, planResolved } = usePlan()
   const {
     uploadState,
     progress,
@@ -59,7 +59,10 @@ const UploadBox = () => {
   const fact = useCyclingFact(isUploading || isProcessing)
 
   // âœ… MULTI-FILE DROP
-  const maxSize = isPro
+  // While the plan is still being fetched, don't enforce the free cap — a pro
+  // user dropping a file in that window must not be rejected with "free limit".
+  const assumePro = isPro || !planResolved
+  const maxSize = assumePro
     ? parseInt(import.meta.env.VITE_MAX_FILE_SIZE || String(DEFAULT_PRO_PDF_SIZE_LIMIT))
     : FREE_PDF_SIZE_LIMIT
 
@@ -75,13 +78,13 @@ const UploadBox = () => {
   const onDropRejected = useCallback((fileRejections: { file: File; errors: readonly { code: string }[] }[]) => {
     fileRejections.forEach(({ file, errors }) => {
       if (errors[0]?.code === 'file-too-large') {
-        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${isPro ? 'limit' : 'free limit'}.`)
+        toast.error(`${file.name} exceeds the ${formatFileSize(maxSize)} ${assumePro ? 'limit' : 'free limit'}.`)
         return
       }
 
       toast.error(`${file.name} is not a valid PDF file.`)
     })
-  }, [maxSize, isPro])
+  }, [maxSize, assumePro])
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -113,7 +116,7 @@ const UploadBox = () => {
           Drag & drop PDFs here
         </h3>
         <p className="text-sm text-gray-500 mb-6">
-          {isPro
+          {assumePro
             ? `Upload one or more PDFs (Max ${formatFileSize(maxSize)} each)`
             : `Free users can upload PDFs up to ${formatFileSize(maxSize)} each`}
         </p>
@@ -133,6 +136,7 @@ const UploadBox = () => {
 
     /* ---------------- UPLOADING / PROCESSING ---------------- */
     if (isUploading || isProcessing) {
+      const totalSize = currentFiles.reduce((s, f) => s + f.size, 0)
       return (
         <motion.div className="text-center">
           <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary-50 rounded-full flex items-center justify-center">
@@ -147,10 +151,7 @@ const UploadBox = () => {
             <div className="mb-4 text-sm text-gray-600">
               {currentFiles.length} PDF file(s)
               <div className="text-xs text-gray-400 mt-1">
-                Total size:{' '}
-                {formatFileSize(
-                  currentFiles.reduce((s, f) => s + f.size, 0)
-                )}
+                Total size: {formatFileSize(totalSize)}
               </div>
             </div>
           )}
@@ -158,6 +159,13 @@ const UploadBox = () => {
           <div className="max-w-xs mx-auto">
             <ProgressBar progress={progress} />
           </div>
+
+          {totalSize >= LARGE_FILE_NOTICE_THRESHOLD && (
+            <p className="mt-3 text-xs font-medium text-amber-600 max-w-xs mx-auto">
+              Large upload ({formatFileSize(totalSize)}) — conversion can take a few
+              minutes. Keep this tab open.
+            </p>
+          )}
 
           <AnimatePresence mode="wait">
             <motion.p
