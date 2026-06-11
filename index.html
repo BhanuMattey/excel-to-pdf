@@ -141,10 +141,22 @@
       })()
 
       if (location.pathname === '/') {
+        // Start early if the user interacts...
         const startOnInteraction = () => startApp()
         window.addEventListener('pointerdown', startOnInteraction, { once: true, passive: true })
         window.addEventListener('keydown', startOnInteraction, { once: true })
         window.addEventListener('scroll', startOnInteraction, { once: true, passive: true })
+        // ...but always start once the page has loaded and the browser is idle,
+        // so the real app takes over without requiring interaction.
+        const startWhenIdle = () => {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => startApp(), { timeout: 2000 })
+          } else {
+            setTimeout(startApp, 1200)
+          }
+        }
+        if (document.readyState === 'complete') startWhenIdle()
+        else window.addEventListener('load', startWhenIdle, { once: true })
       } else {
         startApp()
       }
