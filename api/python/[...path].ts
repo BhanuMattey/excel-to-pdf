@@ -36,7 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Collect the raw body so multipart/form-data file uploads are forwarded intact.
-  let body: Buffer | undefined
+  // fetch() rejects Node's Buffer type (Buffer<ArrayBufferLike> is not BodyInit),
+  // so re-wrap as a plain Uint8Array.
+  let body: Uint8Array<ArrayBuffer> | undefined
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks: Buffer[] = []
     await new Promise<void>((resolve, reject) => {
@@ -45,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req.on('error', reject)
     })
     const buf = Buffer.concat(chunks)
-    if (buf.length > 0) body = buf
+    if (buf.length > 0) body = new Uint8Array(buf)
   }
 
   const upstream = await fetch(target, {
