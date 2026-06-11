@@ -42,10 +42,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/python/:path*",
-      "destination": "/api/python/[...path]"
-    },
-    {
       "source": "/((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
