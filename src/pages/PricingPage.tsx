@@ -64,7 +64,7 @@ const proFeatures = [
 const capabilityRows = [
   { feature: 'PDF to Excel conversion', free: '5 conversions', pro: 'Unlimited' },
   { feature: 'Scanned PDF OCR', free: 'Basic', pro: 'Advanced' },
-  { feature: 'File size limit', free: 'Free limit', pro: 'Unlimited' },
+  { feature: 'File size limit', free: '5MB', pro: '50MB' },
   { feature: 'Excel formatting', free: 'Borders and wrap text', pro: 'Borders and wrap text' },
   { feature: 'Conversion history', free: 'Limited', pro: 'Full history' },
   { feature: 'Support', free: 'Community', pro: 'Priority email' },
