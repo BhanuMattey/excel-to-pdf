@@ -50,12 +50,6 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "excel-to-pdf-two.vercel.app"
-        }
-      ],
       "destination": "https://excelfrompdf.com/$1",
       "permanent": true
     }
